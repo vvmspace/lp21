@@ -1,3 +1,7 @@
+'use client';
+
+import { useState } from 'react';
+
 const rituals = [
   {
     title: 'Дыхание 4-4',
@@ -20,6 +24,12 @@ const metrics = [
 ];
 
 export default function HomePage() {
+  const [feedback, setFeedback] = useState('Нажми на любой ритуал, чтобы зафиксировать шаг.');
+
+  const handleAction = (message: string) => {
+    setFeedback(message);
+  };
+
   return (
     <main className="page">
       <section className="hero">
@@ -31,8 +41,20 @@ export default function HomePage() {
             возвращается сама.
           </p>
           <div className="hero__actions">
-            <button className="primary">Начать ритуал</button>
-            <button className="ghost">Показать мой режим</button>
+            <button
+              className="primary"
+              type="button"
+              onClick={() => handleAction('Ритуал запущен. Я рядом и держу ритм.')}
+            >
+              Начать ритуал
+            </button>
+            <button
+              className="ghost"
+              type="button"
+              onClick={() => handleAction('Твой режим сохранён. Дальше — мягкие рамки без давления.')}
+            >
+              Показать мой режим
+            </button>
           </div>
         </div>
         <div className="hero__card">
@@ -55,12 +77,19 @@ export default function HomePage() {
 
       <section className="rituals">
         <h2>Сегодняшние мягкие рамки</h2>
+        <p className="feedback">{feedback}</p>
         <div className="rituals__grid">
           {rituals.map((ritual) => (
             <article key={ritual.title} className="ritual">
               <h3>{ritual.title}</h3>
               <p>{ritual.detail}</p>
-              <button className="ghost">Я сделаю это</button>
+              <button
+                className="ghost"
+                type="button"
+                onClick={() => handleAction(`Отмечено: ${ritual.title}. Ты молодец, двигаемся мягко.`)}
+              >
+                Я сделаю это
+              </button>
             </article>
           ))}
         </div>
@@ -74,7 +103,13 @@ export default function HomePage() {
             устойчивость. Без давления и сравнения.
           </p>
         </div>
-        <button className="primary">Войти или создать профиль</button>
+        <button
+          className="primary"
+          type="button"
+          onClick={() => handleAction('Готово. Профиль будет создан при первом входе.')}
+        >
+          Войти или создать профиль
+        </button>
       </section>
     </main>
   );
