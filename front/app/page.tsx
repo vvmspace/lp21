@@ -56,12 +56,15 @@ export default function HomePage() {
       minute: '2-digit',
     }).format(new Date(value));
 
-  const authHeaders = authUser
-    ? {
-        'x-auth-login': authUser.login,
-        'x-auth-password': authUser.password,
-      }
-    : {};
+  const authHeaders: HeadersInit = useMemo(() => {
+    if (!authUser) {
+      return {};
+    }
+    return {
+      'x-auth-login': authUser.login,
+      'x-auth-password': authUser.password,
+    };
+  }, [authUser]);
 
   const requestParams = useMemo(
     () => ({
