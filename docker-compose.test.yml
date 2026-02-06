@@ -1,10 +1,21 @@
 version: '3.9'
 
 services:
+  back:
+    build:
+      context: ./back
+    env_file: .env
+    ports:
+      - "${BACK_PORT:-3001}:3001"
+
   front:
     build:
       context: ./front
     env_file: .env
+    environment:
+      BACKEND_URL: http://back:3001
+    depends_on:
+      - back
     ports:
       - "${FRONT_PORT:-3000}:3000"
 

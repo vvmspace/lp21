@@ -17,6 +17,8 @@ services:
       context: ./front
     command: npm run dev
     env_file: .env
+    environment:
+      BACKEND_URL: http://back:3001
     ports:
       - "${FRONT_PORT:-3000}:3000"
     volumes:
