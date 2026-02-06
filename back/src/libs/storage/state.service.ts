@@ -4,16 +4,45 @@ import { loadState, saveState, type LogEntry, type Ritual, type State } from './
 @Injectable()
 export class StateService {
   private state: State;
+  private readonly intervalMs: number;
+  private readonly checkTimer: NodeJS.Timeout;
 
   constructor() {
+    this.intervalMs = Number(process.env.DAILY_TASK_INTERVAL_MS ?? 86_400_000);
     this.state = loadState();
+    this.ensureDailySchedule();
+    this.checkTimer = setInterval(() => {
+      this.checkDailyReset();
+    }, 1000);
+  }
+
+  getDailyStatus(): {
+    completed: boolean;
+    intervalMs: number;
+    nextResetAt: string;
+    remainingMs: number;
+  } {
+    this.checkDailyReset();
+    const now = Date.now();
+    const nextReset = new Date(this.state.daily.nextResetAt).getTime();
+    const remainingMs = Math.max(nextReset - now, 0);
+    const completed = this.state.rituals.every((ritual) => ritual.status === 'done');
+
+    return {
+      completed,
+      intervalMs: this.intervalMs,
+      nextResetAt: this.state.daily.nextResetAt,
+      remainingMs,
+    };
   }
 
   getRituals(): Ritual[] {
+    this.checkDailyReset();
     return this.state.rituals;
   }
 
   completeRitual(id: string): Ritual[] {
+    this.checkDailyReset();
     const now = new Date().toISOString();
     this.state.rituals = this.state.rituals.map((ritual) =>
       ritual.id === id
@@ -35,6 +64,7 @@ export class StateService {
   }
 
   startRitual(): Ritual[] {
+    this.checkDailyReset();
     const next = this.state.rituals.find((ritual) => ritual.status !== 'done');
     if (!next) {
       return this.state.rituals;
@@ -47,6 +77,7 @@ export class StateService {
   }
 
   addLogEntry(entry: Omit<LogEntry, 'id' | 'createdAt'>): LogEntry {
+    this.checkDailyReset();
     const createdAt = new Date().toISOString();
     const log: LogEntry = {
       id: `${entry.title}-${createdAt}`,
@@ -59,10 +90,12 @@ export class StateService {
   }
 
   getLogs(): LogEntry[] {
+    this.checkDailyReset();
     return this.state.logs;
   }
 
   getMetrics(): { label: string; value: string }[] {
+    this.checkDailyReset();
     const total = this.state.rituals.length;
     const completed = this.state.rituals.filter((ritual) => ritual.status === 'done').length;
     const ratio = total === 0 ? 0 : completed / total;
@@ -114,5 +147,51 @@ export class StateService {
         createdAt,
       },
     };
+  }
+
+  private ensureDailySchedule(): void {
+    const nextReset = new Date(this.state.daily.nextResetAt).getTime();
+    if (Number.isNaN(nextReset)) {
+      this.resetDaily('init');
+      return;
+    }
+
+    if (Date.now() >= nextReset) {
+      this.resetDaily('catch-up');
+    }
+  }
+
+  private checkDailyReset(): void {
+    const nextReset = new Date(this.state.daily.nextResetAt).getTime();
+    if (Date.now() >= nextReset) {
+      this.resetDaily('schedule');
+    }
+  }
+
+  private resetDaily(context: 'init' | 'catch-up' | 'schedule'): void {
+    const now = new Date();
+    const nextReset = new Date(now.getTime() + this.intervalMs);
+    this.state.rituals = this.state.rituals.map((ritual) => ({
+      ...ritual,
+      status: 'idle',
+      completedAt: undefined,
+    }));
+    this.state.daily = {
+      lastResetAt: now.toISOString(),
+      nextResetAt: nextReset.toISOString(),
+    };
+    this.state.logs = [
+      {
+        id: `daily-reset-${now.toISOString()}`,
+        title: 'Новый цикл',
+        note:
+          context === 'schedule'
+            ? 'Ежедневные рамки обновлены автоматически.'
+            : 'Рамки синхронизированы при запуске.',
+        createdAt: now.toISOString(),
+      },
+      ...this.state.logs,
+    ];
+    saveState(this.state);
   }
 }

@@ -1,29 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-
-type RitualStatus = 'idle' | 'active' | 'done';
-
-type Ritual = {
-  id: string;
-  title: string;
-  detail: string;
-  duration: string;
-  status: RitualStatus;
-  completedAt?: string;
-};
-
-type LogEntry = {
-  id: string;
-  title: string;
-  note: string;
-  createdAt: string;
-};
-
-type Metric = {
-  label: string;
-  value: string;
-};
+import Link from 'next/link';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { DailyStatus, LogEntry, Metric, Ritual } from './lib/types';
 
 const modeSteps = [
   {
@@ -57,12 +36,9 @@ export default function HomePage() {
   const [focusId, setFocusId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState('Загружаем состояние...');
   const [modeOpen, setModeOpen] = useState(false);
-  const [authOpen, setAuthOpen] = useState(false);
-  const [authLoading, setAuthLoading] = useState(false);
-  const [authForm, setAuthForm] = useState({ login: '', password: '' });
-  const [authResult, setAuthResult] = useState<string | null>(null);
-  const [authError, setAuthError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [dailyStatus, setDailyStatus] = useState<DailyStatus | null>(null);
+  const [countdown, setCountdown] = useState('00:00:00');
 
   const progress = useMemo(() => {
     const total = rituals.length;
@@ -71,6 +47,20 @@ export default function HomePage() {
   }, [rituals]);
 
   const focusRitual = rituals.find((ritual) => ritual.id === focusId) ?? null;
+
+  const fetchDailyStatus = async () => {
+    try {
+      const response = await fetch(`${apiUrl}/v1/daily`);
+      if (!response.ok) {
+        throw new Error('Не удалось получить ежедневный ритм.');
+      }
+      const data: DailyStatus = await response.json();
+      setDailyStatus(data);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Ошибка ежедневного ритма.';
+      setLoadError(message);
+    }
+  };
 
   const loadState = async () => {
     try {
@@ -91,6 +81,7 @@ export default function HomePage() {
       setRituals(ritualsData);
       setMetrics(metricsData);
       setLogEntries(logsData);
+      void fetchDailyStatus();
 
       const active = ritualsData.find((ritual) => ritual.status === 'active') ?? null;
       setFocusId(active?.id ?? null);
@@ -109,6 +100,28 @@ export default function HomePage() {
   useEffect(() => {
     void loadState();
   }, []);
+
+  useEffect(() => {
+    if (!dailyStatus) {
+      return undefined;
+    }
+
+    const updateCountdown = () => {
+      const remaining = Math.max(
+        new Date(dailyStatus.nextResetAt).getTime() - Date.now(),
+        0,
+      );
+      const totalSeconds = Math.floor(remaining / 1000);
+      const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+      const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+      const seconds = String(totalSeconds % 60).padStart(2, '0');
+      setCountdown(`${hours}:${minutes}:${seconds}`);
+    };
+
+    updateCountdown();
+    const timer = setInterval(updateCountdown, 1000);
+    return () => clearInterval(timer);
+  }, [dailyStatus]);
 
   const pushLog = async (title: string, note: string) => {
     const response = await fetch(`${apiUrl}/v1/logs`, {
@@ -145,6 +158,7 @@ export default function HomePage() {
         setFeedback(`Старт мягкой сессии. Сейчас фокус: ${active.title}.`);
         await pushLog('Сессия началась', `Фокус: ${active.title}.`);
       }
+      void fetchDailyStatus();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Ошибка запуска.';
       setLoadError(message);
@@ -177,6 +191,7 @@ export default function HomePage() {
         const metricsData: Metric[] = await metricsResponse.json();
         setMetrics(metricsData);
       }
+      void fetchDailyStatus();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Ошибка завершения.';
       setLoadError(message);
@@ -189,45 +204,6 @@ export default function HomePage() {
       await pushLog('Режим раскрыт', 'План дня показан без давления.');
     } catch {
       // do nothing, log will be retried on next successful action
-    }
-  };
-
-  const handleAuthOpen = () => {
-    setAuthOpen(true);
-    setAuthResult(null);
-    setAuthError(null);
-    authRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
-  const handleAuthSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setAuthLoading(true);
-    setAuthResult(null);
-    setAuthError(null);
-
-    try {
-      const response = await fetch(`${apiUrl}/v1/session/auth`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(authForm),
-      });
-
-      if (!response.ok) {
-        throw new Error('Сервер временно недоступен.');
-      }
-
-      const data: { success: boolean; message: string; user?: { login: string; createdAt: string } } =
-        await response.json();
-
-      setAuthResult(`${data.message} Пользователь: ${data.user?.login ?? authForm.login}.`);
-      await pushLog(data.success ? 'Вход подтверждён' : 'Нужен пароль', data.message);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Не удалось подключиться.';
-      setAuthError(message);
-    } finally {
-      setAuthLoading(false);
     }
   };
 
@@ -286,6 +262,15 @@ export default function HomePage() {
               <span style={{ width: `${progress.percent}%` }} />
             </div>
           </div>
+          {dailyStatus?.completed && (
+            <div className="countdown">
+              <div className="countdown__icon">⏳</div>
+              <div>
+                <p>Все рамки выполнены. До нового цикла:</p>
+                <strong>{countdown}</strong>
+              </div>
+            </div>
+          )}
           <div className="pulse">
             <div className="pulse__dot" />
             <p>AI рядом. Он удерживает ритм.</p>
@@ -359,41 +344,9 @@ export default function HomePage() {
             сравнения.
           </p>
         </div>
-        <button className="primary" type="button" onClick={handleAuthOpen}>
+        <Link className="primary" href="/auth">
           Войти или создать профиль
-        </button>
-        {authOpen && (
-          <form className="auth" onSubmit={handleAuthSubmit}>
-            <div className="auth__field">
-              <label htmlFor="login">Логин</label>
-              <input
-                id="login"
-                name="login"
-                value={authForm.login}
-                onChange={(event) => setAuthForm((prev) => ({ ...prev, login: event.target.value }))}
-                placeholder="life@protocol"
-                required
-              />
-            </div>
-            <div className="auth__field">
-              <label htmlFor="password">Пароль</label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                value={authForm.password}
-                onChange={(event) => setAuthForm((prev) => ({ ...prev, password: event.target.value }))}
-                placeholder="••••••••"
-                required
-              />
-            </div>
-            <button className="primary" type="submit" disabled={authLoading}>
-              {authLoading ? 'Проверяем...' : 'Подтвердить'}
-            </button>
-            {authResult && <p className="auth__result">{authResult}</p>}
-            {authError && <p className="auth__error">{authError}</p>}
-          </form>
-        )}
+        </Link>
       </section>
     </main>
   );

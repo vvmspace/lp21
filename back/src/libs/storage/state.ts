@@ -29,34 +29,46 @@ export type State = {
   users: Record<string, User>;
   rituals: Ritual[];
   logs: LogEntry[];
+  daily: {
+    lastResetAt: string;
+    nextResetAt: string;
+  };
 };
 
-const defaultState: State = {
-  users: {},
-  rituals: [
-    {
-      id: 'breath',
-      title: 'Дыхание 4-4',
-      detail: 'Сделай четыре мягких вдоха и выдоха. Мы не спешим.',
-      duration: '2 минуты',
-      status: 'idle',
+const createDefaultState = (intervalMs: number): State => {
+  const now = new Date();
+  const nextReset = new Date(now.getTime() + intervalMs);
+  return {
+    users: {},
+    rituals: [
+      {
+        id: 'breath',
+        title: 'Дыхание 4-4',
+        detail: 'Сделай четыре мягких вдоха и выдоха. Мы не спешим.',
+        duration: '2 минуты',
+        status: 'idle',
+      },
+      {
+        id: 'water',
+        title: 'Вода + тепло',
+        detail: 'Один стакан воды и тёплая пауза в теле.',
+        duration: '3 минуты',
+        status: 'idle',
+      },
+      {
+        id: 'step',
+        title: 'Мини-шаг',
+        detail: 'Один микрошаг, который делает день устойчивее.',
+        duration: '5 минут',
+        status: 'idle',
+      },
+    ],
+    logs: [],
+    daily: {
+      lastResetAt: now.toISOString(),
+      nextResetAt: nextReset.toISOString(),
     },
-    {
-      id: 'water',
-      title: 'Вода + тепло',
-      detail: 'Один стакан воды и тёплая пауза в теле.',
-      duration: '3 минуты',
-      status: 'idle',
-    },
-    {
-      id: 'step',
-      title: 'Мини-шаг',
-      detail: 'Один микрошаг, который делает день устойчивее.',
-      duration: '5 минут',
-      status: 'idle',
-    },
-  ],
-  logs: [],
+  };
 };
 
 const statePath = process.env.STATE_PATH ?? '/app/data/state.json';
@@ -70,14 +82,27 @@ const ensureDir = () => {
 
 export const loadState = (): State => {
   ensureDir();
+  const intervalMs = Number(process.env.DAILY_TASK_INTERVAL_MS ?? 86_400_000);
   if (!existsSync(statePath)) {
+    const defaultState = createDefaultState(intervalMs);
     writeFileSync(statePath, JSON.stringify(defaultState, null, 2), 'utf-8');
     return { ...defaultState };
   }
   const raw = readFileSync(statePath, 'utf-8');
   try {
-    return JSON.parse(raw) as State;
+    const parsed = JSON.parse(raw) as State;
+    if (!parsed.daily) {
+      const defaultState = createDefaultState(intervalMs);
+      const merged: State = {
+        ...parsed,
+        daily: defaultState.daily,
+      };
+      writeFileSync(statePath, JSON.stringify(merged, null, 2), 'utf-8');
+      return merged;
+    }
+    return parsed;
   } catch {
+    const defaultState = createDefaultState(intervalMs);
     writeFileSync(statePath, JSON.stringify(defaultState, null, 2), 'utf-8');
     return { ...defaultState };
   }

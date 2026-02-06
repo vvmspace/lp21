@@ -5,6 +5,8 @@ services:
     build:
       context: ./back
     env_file: .env
+    environment:
+      DAILY_TASK_INTERVAL_MS: 86400000
     ports:
       - "${BACK_PORT:-3001}:3001"
     volumes:

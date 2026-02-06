@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { DailyController } from './controllers/daily.controller';
 import { HealthController } from './controllers/health.controller';
 import { SessionController } from './controllers/session.controller';
 import { RitualsController } from './controllers/rituals.controller';
@@ -9,7 +10,14 @@ import { SessionService } from './services/session.service';
 import { StateService } from '../libs/storage/state.service';
 
 @Module({
-  controllers: [HealthController, SessionController, RitualsController, LogsController, MetricsController],
+  controllers: [
+    DailyController,
+    HealthController,
+    SessionController,
+    RitualsController,
+    LogsController,
+    MetricsController,
+  ],
   providers: [HealthService, SessionService, StateService],
 })
 export class AppModule {}

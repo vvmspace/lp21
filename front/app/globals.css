@@ -30,6 +30,10 @@ body {
   align-items: center;
 }
 
+.hero--auth {
+  align-items: start;
+}
+
 .badge {
   display: inline-flex;
   padding: 6px 12px;
@@ -63,12 +67,16 @@ h1 {
 
 .primary,
 .ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: none;
   border-radius: 999px;
   padding: 12px 22px;
   font-size: 0.95rem;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  text-decoration: none;
 }
 
 .primary {
@@ -147,6 +155,36 @@ h1 {
   height: 100%;
   border-radius: inherit;
   background: linear-gradient(120deg, #6f8bff, #8b5bff);
+}
+
+.countdown {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(111, 139, 255, 0.12);
+  border: 1px solid rgba(111, 139, 255, 0.3);
+  color: #d8dfff;
+  font-size: 0.9rem;
+}
+
+.countdown strong {
+  display: block;
+  font-size: 1.1rem;
+  margin-top: 4px;
+}
+
+.countdown__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: linear-gradient(140deg, rgba(111, 139, 255, 0.6), rgba(139, 91, 255, 0.6));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  box-shadow: 0 12px 24px rgba(111, 139, 255, 0.2);
 }
 
 .pulse {
