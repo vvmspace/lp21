@@ -1,4 +1,5 @@
 Сгенерируй %count% ежедневных задач Life Protocol.
+Пиши на %language_name%.
 Контекст прогресса:
 - всего ритуалов: %rituals_total%
 - завершено ритуалов: %rituals_completed%

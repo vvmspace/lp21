@@ -2,10 +2,10 @@ import { ApiProperty } from '@nestjs/swagger';
 import { UserEntity } from '../entities/user.entity';
 
 export class AuthResponseDto {
-  @ApiProperty({ example: true })
+  @ApiProperty()
   success: boolean;
 
-  @ApiProperty({ example: 'Новый пользователь создан.' })
+  @ApiProperty()
   message: string;
 
   @ApiProperty({ type: UserEntity })

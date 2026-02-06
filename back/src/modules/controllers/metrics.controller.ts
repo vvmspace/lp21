@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { MetricDto } from '../dtos/metrics.dto';
 import { StateService } from '../../libs/storage/state.service';
@@ -10,7 +10,8 @@ export class MetricsController {
 
   @Get()
   @ApiOkResponse({ type: MetricDto, isArray: true })
-  getMetrics(): MetricDto[] {
-    return this.stateService.getMetrics();
+  getMetrics(@Query('lang') language?: string, @Query('login') login?: string): MetricDto[] {
+    const resolved = language ?? this.stateService.getUserLanguage(login);
+    return this.stateService.getMetrics(resolved);
   }
 }

@@ -1,0 +1,176 @@
+{
+  "meta": {
+    "title": "Life Protocol",
+    "description": "Lifestyle guidance system prototype"
+  },
+  "common": {
+    "dateLocale": "es-ES",
+    "loading": "Cargando estado...",
+    "aiPulse": "La IA está cerca. Mantiene el ritmo."
+  },
+  "language": {
+    "label": "Idioma",
+    "options": {
+      "ru": "Русский",
+      "en": "English",
+      "es": "Español"
+    }
+  },
+  "hero": {
+    "badge": "Life Protocol · v2.1",
+    "title": "Un sistema que te sostiene cuando todo suena fuerte.",
+    "subtitle": "No exigimos. Creamos marcos suaves donde la voluntad regresa sola.",
+    "start": "Iniciar ritual",
+    "showMode": "Mostrar mi modo",
+    "hideMode": "Ocultar mi modo",
+    "stateTitle": "Estado actual",
+    "stateSubtitle": "Registro neutral en lugar de juicio.",
+    "modeSteps": [
+      {
+        "title": "Mañana sin presión",
+        "detail": "Tres minutos de silencio para que el sistema sepa que estás aquí."
+      },
+      {
+        "title": "Día dentro de marcos",
+        "detail": "Una revisión del cuerpo y un micro-paso en la realidad."
+      },
+      {
+        "title": "Cierre de la tarde",
+        "detail": "Una revisión corta del estado sin evaluación."
+      }
+    ]
+  },
+  "metrics": {
+    "loading": "Cargando métricas...",
+    "progressLabel": "Ritmo de hoy",
+    "completedLabel": "Todos los marcos completados. Hasta el próximo ciclo:",
+    "countdownIconLabel": "Cuenta atrás"
+  },
+  "rituals": {
+    "title": "Marcos suaves de hoy",
+    "feedbackEmpty": "No hay marcos activos. Agrega el primer paso.",
+    "feedbackChoose": "Toca cualquier ritual para registrar el paso.",
+    "focusLabel": "Foco actual",
+    "loading": "Cargando rituales...",
+    "statusDone": "Hecho",
+    "statusSoft": "Paso suave",
+    "buttonDone": "Marcado",
+    "buttonDo": "Lo haré",
+    "logTitle": "Registro de pasos",
+    "logEmpty": "Silencio por ahora. El primer paso aparecerá aquí."
+  },
+  "tasks": {
+    "title": "Sugerencias suaves para hoy",
+    "subtitle": "Nacen de tu progreso. Si no resuena — desliza y el sistema se ajustará.",
+    "loading": "La IA elige sugerencias...",
+    "swap": "No es para mí — reemplazar"
+  },
+  "cta": {
+    "title": "No tienes que hacerlo sola.",
+    "subtitle": "Life Protocol sostiene el espacio mientras recuperas estabilidad. Sin presión ni comparación.",
+    "action": "Iniciar sesión o crear perfil"
+  },
+  "auth": {
+    "badge": "Life Protocol · acceso",
+    "title": "Primero revisaremos con cuidado el marco de acceso.",
+    "subtitle": "Si estás aquí por primera vez, crearemos un perfil. Si ya estuviste, confirmaremos presencia.",
+    "cardTitle": "Autenticación",
+    "cardSubtitle": "Sin juicios ocultos. Solo entrada al espacio.",
+    "loginLabel": "Usuario",
+    "passwordLabel": "Contraseña",
+    "loginPlaceholder": "life@protocol",
+    "passwordPlaceholder": "••••••••",
+    "submit": "Confirmar",
+    "submitting": "Verificando...",
+    "result": "%message% Usuario: %login%.",
+    "back": "Volver al inicio"
+  },
+  "errors": {
+    "daily": "No se pudo cargar el ritmo diario.",
+    "dailyFallback": "Error del ritmo diario.",
+    "state": "No se pudo cargar el estado.",
+    "stateFallback": "Error de carga.",
+    "stateFailed": "No se pudo cargar el estado.",
+    "log": "No se pudo registrar el paso.",
+    "tasks": "No se pudieron cargar sugerencias.",
+    "tasksFallback": "Error de sugerencias.",
+    "startRitual": "No se pudo iniciar el ritual.",
+    "completeRitual": "No se pudo completar el ritual.",
+    "swapTask": "No se pudo actualizar la sugerencia.",
+    "authServer": "Servidor temporalmente no disponible.",
+    "authFallback": "No se pudo conectar."
+  },
+  "feedback": {
+    "startFocus": "Sesión suave iniciada. Foco ahora: %title%.",
+    "complete": "Registrado: %title%. %completed%/%total%.",
+    "completedFallback": "ritual"
+  },
+  "logs": {
+    "sessionStartedTitle": "Sesión iniciada",
+    "sessionStartedNote": "Foco: %title%.",
+    "ritualCompletedTitle": "Marcado: %title%",
+    "ritualCompletedNote": "Los marcos se mantuvieron sin presión.",
+    "modeOpenedTitle": "Modo abierto",
+    "modeOpenedNote": "El plan del día se mostró sin presión.",
+    "taskSwappedTitle": "Tarea reemplazada",
+    "taskSwappedNote": "El usuario pidió otro paso suave."
+  },
+  "lock": {
+    "hint": "Las acciones están disponibles después de iniciar sesión.",
+    "cta": "Ir al acceso"
+  },
+  "demo": {
+    "metrics": [
+      { "label": "Sueño", "value": "Estable" },
+      { "label": "Ruido interno", "value": "Disminuye" },
+      { "label": "Ritmo", "value": "En formación" }
+    ],
+    "rituals": [
+      {
+        "id": "demo-breath",
+        "title": "Respiración 4-4",
+        "detail": "Haz cuatro inhalaciones y exhalaciones suaves. Sin prisa.",
+        "duration": "2 minutos",
+        "status": "idle"
+      },
+      {
+        "id": "demo-water",
+        "title": "Agua + calor",
+        "detail": "Un vaso de agua y una pausa cálida en el cuerpo.",
+        "duration": "3 minutos",
+        "status": "active"
+      },
+      {
+        "id": "demo-step",
+        "title": "Micro-paso",
+        "detail": "Un micro-paso que vuelve el día más estable.",
+        "duration": "5 minutos",
+        "status": "idle"
+      }
+    ],
+    "tasks": [
+      {
+        "id": "demo-task-1",
+        "title": "Un respiro suave",
+        "detail": "Pausa 20 segundos y observa tu respiración."
+      },
+      {
+        "id": "demo-task-2",
+        "title": "Pausa cálida",
+        "detail": "Toca una taza o una manta y deja que el cuerpo se sienta seguro."
+      },
+      {
+        "id": "demo-task-3",
+        "title": "Micro-elección",
+        "detail": "Elige un punto agradable para hoy."
+      }
+    ],
+    "logs": [
+      {
+        "id": "demo-log-1",
+        "title": "Ritmo aceptado",
+        "note": "El sistema ya está cerca, los pasos se suavizan."
+      }
+    ]
+  }
+}

@@ -5,9 +5,6 @@ export type RitualStatus = 'idle' | 'active' | 'done';
 
 export type Ritual = {
   id: string;
-  title: string;
-  detail: string;
-  duration: string;
   status: RitualStatus;
   completedAt?: string;
 };
@@ -30,6 +27,7 @@ export type User = {
   login: string;
   password: string;
   createdAt: string;
+  language: string;
 };
 
 export type State = {
@@ -51,23 +49,14 @@ const createDefaultState = (intervalMs: number): State => {
     rituals: [
       {
         id: 'breath',
-        title: 'Дыхание 4-4',
-        detail: 'Сделай четыре мягких вдоха и выдоха. Мы не спешим.',
-        duration: '2 минуты',
         status: 'idle',
       },
       {
         id: 'water',
-        title: 'Вода + тепло',
-        detail: 'Один стакан воды и тёплая пауза в теле.',
-        duration: '3 минуты',
         status: 'idle',
       },
       {
         id: 'step',
-        title: 'Мини-шаг',
-        detail: 'Один микрошаг, который делает день устойчивее.',
-        duration: '5 минут',
         status: 'idle',
       },
     ],
@@ -100,17 +89,39 @@ export const loadState = (): State => {
   const raw = readFileSync(statePath, 'utf-8');
   try {
     const parsed = JSON.parse(raw) as State;
+    const rituals = (parsed.rituals ?? []).map((ritual) => ({
+      id: ritual.id,
+      status: ritual.status,
+      completedAt: ritual.completedAt,
+    }));
+
+    const users = Object.fromEntries(
+      Object.entries(parsed.users ?? {}).map(([login, user]) => [
+        login,
+        {
+          ...user,
+          language: user.language ?? 'ru',
+        },
+      ]),
+    );
+
     if (!parsed.daily || !parsed.tasks) {
       const defaultState = createDefaultState(intervalMs);
       const merged: State = {
         ...parsed,
+        users,
+        rituals,
         tasks: parsed.tasks ?? defaultState.tasks,
         daily: defaultState.daily,
       };
       writeFileSync(statePath, JSON.stringify(merged, null, 2), 'utf-8');
       return merged;
     }
-    return parsed;
+    return {
+      ...parsed,
+      users,
+      rituals,
+    };
   } catch {
     const defaultState = createDefaultState(intervalMs);
     writeFileSync(statePath, JSON.stringify(defaultState, null, 2), 'utf-8');

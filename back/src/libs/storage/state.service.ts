@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { loadState, saveState, type LogEntry, type Ritual, type State, type Task } from './state';
+import { defaultLocale, resolveLocale, t, type Locale } from '../localization/i18n';
 
 @Injectable()
 export class StateService {
@@ -36,9 +37,15 @@ export class StateService {
     };
   }
 
-  getRituals(): Ritual[] {
+  getRituals(language?: string): (Ritual & { title: string; detail: string; duration: string })[] {
     this.checkDailyReset();
-    return this.state.rituals;
+    const locale = resolveLocale(language);
+    return this.state.rituals.map((ritual) => ({
+      ...ritual,
+      title: t(locale, `rituals.${ritual.id}.title`),
+      detail: t(locale, `rituals.${ritual.id}.detail`),
+      duration: t(locale, `rituals.${ritual.id}.duration`),
+    }));
   }
 
   getTasks(): Task[] {
@@ -81,7 +88,10 @@ export class StateService {
     return { ritualsTotal, ritualsCompleted, logsCount, completionRatio };
   }
 
-  completeRitual(id: string): Ritual[] {
+  completeRitual(
+    id: string,
+    language?: string,
+  ): (Ritual & { title: string; detail: string; duration: string })[] {
     this.checkDailyReset();
     const now = new Date().toISOString();
     this.state.rituals = this.state.rituals.map((ritual) =>
@@ -100,10 +110,12 @@ export class StateService {
     }
 
     saveState(this.state);
-    return this.state.rituals;
+    return this.getRituals(language);
   }
 
-  startRitual(): Ritual[] {
+  startRitual(
+    language?: string,
+  ): (Ritual & { title: string; detail: string; duration: string })[] {
     this.checkDailyReset();
     const next = this.state.rituals.find((ritual) => ritual.status !== 'done');
     if (!next) {
@@ -113,7 +125,7 @@ export class StateService {
       ritual.id === next.id ? { ...ritual, status: 'active' } : ritual.status === 'done' ? ritual : { ...ritual, status: 'idle' },
     );
     saveState(this.state);
-    return this.state.rituals;
+    return this.getRituals(language);
   }
 
   addLogEntry(entry: Omit<LogEntry, 'id' | 'createdAt'>): LogEntry {
@@ -134,59 +146,85 @@ export class StateService {
     return this.state.logs;
   }
 
-  getMetrics(): { label: string; value: string }[] {
+  getMetrics(language?: string): { label: string; value: string }[] {
     this.checkDailyReset();
+    const locale = resolveLocale(language);
     const total = this.state.rituals.length;
     const completed = this.state.rituals.filter((ritual) => ritual.status === 'done').length;
     const ratio = total === 0 ? 0 : completed / total;
 
     return [
       {
-        label: 'Сон',
-        value: ratio >= 0.66 ? 'Стабильный' : 'Нужна поддержка',
+        label: t(locale, 'metrics.sleep.label'),
+        value: ratio >= 0.66 ? t(locale, 'metrics.sleep.stable') : t(locale, 'metrics.sleep.support'),
       },
       {
-        label: 'Внутренний шум',
-        value: ratio >= 0.33 ? 'Снижается' : 'Сильный',
+        label: t(locale, 'metrics.noise.label'),
+        value: ratio >= 0.33 ? t(locale, 'metrics.noise.down') : t(locale, 'metrics.noise.high'),
       },
       {
-        label: 'Режим',
-        value: ratio >= 0.5 ? 'Формируется' : 'Требует опоры',
+        label: t(locale, 'metrics.mode.label'),
+        value: ratio >= 0.5 ? t(locale, 'metrics.mode.forming') : t(locale, 'metrics.mode.support'),
       },
     ];
   }
 
-  authenticate(login: string, password: string): {
+  authenticate(login: string, password: string, language?: string): {
     success: boolean;
     message: string;
-    user: { login: string; createdAt: string };
+    user: { login: string; createdAt: string; language: string };
   } {
+    const locale = resolveLocale(language);
     const existing = this.state.users[login];
 
     if (existing) {
       const success = existing.password === password;
       return {
         success,
-        message: success ? 'Добро пожаловать обратно.' : 'Неверный пароль.',
+        message: success ? t(locale, 'auth.welcomeBack') : t(locale, 'auth.invalidPassword'),
         user: {
           login,
           createdAt: existing.createdAt,
+          language: existing.language ?? locale,
         },
       };
     }
 
     const createdAt = new Date().toISOString();
-    this.state.users[login] = { login, password, createdAt };
+    this.state.users[login] = { login, password, createdAt, language: locale };
     saveState(this.state);
 
     return {
       success: true,
-      message: 'Новый пользователь создан.',
+      message: t(locale, 'auth.newUser'),
       user: {
         login,
         createdAt,
+        language: locale,
       },
     };
+  }
+
+  updateUserLanguage(login: string, language: string): { login: string; createdAt: string; language: string } | null {
+    const user = this.state.users[login];
+    if (!user) {
+      return null;
+    }
+    const locale = resolveLocale(language);
+    this.state.users[login] = { ...user, language: locale };
+    saveState(this.state);
+    return { login: user.login, createdAt: user.createdAt, language: locale };
+  }
+
+  getUserLanguage(login?: string): Locale {
+    if (!login) {
+      return defaultLocale;
+    }
+    const user = this.state.users[login];
+    if (!user) {
+      return defaultLocale;
+    }
+    return resolveLocale(user.language);
   }
 
   private ensureDailySchedule(): void {
@@ -211,6 +249,7 @@ export class StateService {
   private resetDaily(context: 'init' | 'catch-up' | 'schedule'): void {
     const now = new Date();
     const nextReset = new Date(now.getTime() + this.intervalMs);
+    const locale = defaultLocale;
     this.state.rituals = this.state.rituals.map((ritual) => ({
       ...ritual,
       status: 'idle',
@@ -223,11 +262,13 @@ export class StateService {
     this.state.logs = [
       {
         id: `daily-reset-${now.toISOString()}`,
-        title: 'Новый цикл',
+        title: t(locale, 'logs.dailyReset.title'),
         note:
           context === 'schedule'
-            ? 'Ежедневные рамки обновлены автоматически.'
-            : 'Рамки синхронизированы при запуске.',
+            ? t(locale, 'logs.dailyReset.note.schedule')
+            : context === 'catch-up'
+              ? t(locale, 'logs.dailyReset.note.catchUp')
+              : t(locale, 'logs.dailyReset.note.init'),
         createdAt: now.toISOString(),
       },
       ...this.state.logs,

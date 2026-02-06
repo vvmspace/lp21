@@ -10,30 +10,32 @@ export class TasksService {
     private readonly aiService: AIService,
   ) {}
 
-  async getTasks(): Promise<Task[]> {
+  async getTasks(language?: string, login?: string): Promise<Task[]> {
     const existing = this.stateService.getTasks();
     if (existing.length > 0) {
       return existing;
     }
-    return this.generateTasks(3);
+    return this.generateTasks(3, language, login);
   }
 
-  async swipeTask(taskId: string): Promise<Task[]> {
+  async swipeTask(taskId: string, language?: string, login?: string): Promise<Task[]> {
     const removed = this.stateService.removeTask(taskId);
     if (!removed) {
       return this.stateService.getTasks();
     }
-    const [replacement] = await this.generateTasks(1);
+    const [replacement] = await this.generateTasks(1, language, login);
     if (replacement) {
       this.stateService.addTask(replacement);
     }
     return this.stateService.getTasks();
   }
 
-  private async generateTasks(count: number): Promise<Task[]> {
+  private async generateTasks(count: number, language?: string, login?: string): Promise<Task[]> {
     const progress = this.stateService.getProgressSummary();
+    const resolvedLanguage = login ? this.stateService.getUserLanguage(login) : language;
     const suggestions = await this.aiService.generateTasks({
       count,
+      language: resolvedLanguage,
       ritualsTotal: progress.ritualsTotal,
       ritualsCompleted: progress.ritualsCompleted,
       logsCount: progress.logsCount,

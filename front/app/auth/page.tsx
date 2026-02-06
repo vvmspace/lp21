@@ -2,10 +2,19 @@
 
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
+import { LanguageSwitcher } from '../lib/language-switcher';
+import { useLocale } from '../lib/i18n';
 
 const apiUrl = '/api';
 
+type AuthResponse = {
+  success: boolean;
+  message: string;
+  user?: { login: string; createdAt: string; language?: string };
+};
+
 export default function AuthPage() {
+  const { t, locale, data, setLocale } = useLocale();
   const [authLoading, setAuthLoading] = useState(false);
   const [authForm, setAuthForm] = useState({ login: '', password: '' });
   const [authResult, setAuthResult] = useState<string | null>(null);
@@ -23,19 +32,25 @@ export default function AuthPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(authForm),
+        body: JSON.stringify({ ...authForm, language: locale }),
       });
 
       if (!response.ok) {
-        throw new Error('Сервер временно недоступен.');
+        throw new Error(t('errors.authServer'));
       }
 
-      const data: { success: boolean; message: string; user?: { login: string; createdAt: string } } =
-        await response.json();
+      const dataResponse: AuthResponse = await response.json();
+      const loginValue = dataResponse.user?.login ?? authForm.login;
+      const userLanguage = dataResponse.user?.language ?? locale;
+      const payload = { login: loginValue, language: userLanguage };
 
-      setAuthResult(`${data.message} Пользователь: ${data.user?.login ?? authForm.login}.`);
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('lp-user', JSON.stringify(payload));
+      }
+      setLocale(userLanguage as typeof locale);
+      setAuthResult(t('auth.result', { message: dataResponse.message, login: loginValue }));
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Не удалось подключиться.';
+      const message = error instanceof Error ? error.message : t('errors.authFallback');
       setAuthError(message);
     } finally {
       setAuthLoading(false);
@@ -46,48 +61,48 @@ export default function AuthPage() {
     <main className="page">
       <section className="hero hero--auth">
         <div className="hero__content">
-          <p className="badge">Life Protocol · вход</p>
-          <h1>Сначала мы бережно проверим рамки доступа.</h1>
-          <p className="subtitle">
-            Если ты здесь впервые, мы создадим профиль. Если ты уже был — просто подтвердим
-            присутствие.
-          </p>
+          <div className="hero__header">
+            <p className="badge">{data.auth.badge}</p>
+            <LanguageSwitcher />
+          </div>
+          <h1>{data.auth.title}</h1>
+          <p className="subtitle">{data.auth.subtitle}</p>
         </div>
         <div className="hero__card">
-          <h2>Авторизация</h2>
-          <p className="muted">Никаких скрытых оценок. Только вход в пространство.</p>
+          <h2>{data.auth.cardTitle}</h2>
+          <p className="muted">{data.auth.cardSubtitle}</p>
           <form className="auth" onSubmit={handleAuthSubmit}>
             <div className="auth__field">
-              <label htmlFor="login">Логин</label>
+              <label htmlFor="login">{data.auth.loginLabel}</label>
               <input
                 id="login"
                 name="login"
                 value={authForm.login}
                 onChange={(event) => setAuthForm((prev) => ({ ...prev, login: event.target.value }))}
-                placeholder="life@protocol"
+                placeholder={data.auth.loginPlaceholder}
                 required
               />
             </div>
             <div className="auth__field">
-              <label htmlFor="password">Пароль</label>
+              <label htmlFor="password">{data.auth.passwordLabel}</label>
               <input
                 id="password"
                 name="password"
                 type="password"
                 value={authForm.password}
                 onChange={(event) => setAuthForm((prev) => ({ ...prev, password: event.target.value }))}
-                placeholder="••••••••"
+                placeholder={data.auth.passwordPlaceholder}
                 required
               />
             </div>
             <button className="primary" type="submit" disabled={authLoading}>
-              {authLoading ? 'Проверяем...' : 'Подтвердить'}
+              {authLoading ? data.auth.submitting : data.auth.submit}
             </button>
             {authResult && <p className="auth__result">{authResult}</p>}
             {authError && <p className="auth__error">{authError}</p>}
           </form>
           <Link className="ghost" href="/">
-            Вернуться на главную
+            {data.auth.back}
           </Link>
         </div>
       </section>

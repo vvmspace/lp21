@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post } from '@nestjs/common';
+import { Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { RitualDto } from '../dtos/ritual.dto';
 import { StateService } from '../../libs/storage/state.service';
@@ -10,19 +10,26 @@ export class RitualsController {
 
   @Get()
   @ApiOkResponse({ type: RitualDto, isArray: true })
-  getRituals(): RitualDto[] {
-    return this.stateService.getRituals();
+  getRituals(@Query('lang') language?: string, @Query('login') login?: string): RitualDto[] {
+    const resolved = language ?? this.stateService.getUserLanguage(login);
+    return this.stateService.getRituals(resolved);
   }
 
   @Post('start')
   @ApiOkResponse({ type: RitualDto, isArray: true })
-  startRitual(): RitualDto[] {
-    return this.stateService.startRitual();
+  startRitual(@Query('lang') language?: string, @Query('login') login?: string): RitualDto[] {
+    const resolved = language ?? this.stateService.getUserLanguage(login);
+    return this.stateService.startRitual(resolved);
   }
 
   @Post(':id/complete')
   @ApiOkResponse({ type: RitualDto, isArray: true })
-  completeRitual(@Param('id') id: string): RitualDto[] {
-    return this.stateService.completeRitual(id);
+  completeRitual(
+    @Param('id') id: string,
+    @Query('lang') language?: string,
+    @Query('login') login?: string,
+  ): RitualDto[] {
+    const resolved = language ?? this.stateService.getUserLanguage(login);
+    return this.stateService.completeRitual(id, resolved);
   }
 }

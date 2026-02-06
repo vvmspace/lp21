@@ -1,33 +1,76 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { DailyStatus, LogEntry, Metric, Ritual, Task } from './lib/types';
-
-const modeSteps = [
-  {
-    title: 'Утро без давления',
-    detail: '3 минуты тишины, чтобы система поняла: ты на связи.',
-  },
-  {
-    title: 'День под рамками',
-    detail: 'Одна фиксация тела и один микрошаг в реальности.',
-  },
-  {
-    title: 'Вечер как закрытие',
-    detail: 'Короткая проверка состояния без оценок.',
-  },
-];
+import { LanguageSwitcher } from './lib/language-switcher';
+import { useLocale, type Locale } from './lib/i18n';
 
 const apiUrl = '/api';
 
-const formatTime = (value: string) =>
-  new Date(value).toLocaleTimeString('ru-RU', {
-    hour: '2-digit',
-    minute: '2-digit',
+const buildUrl = (path: string, params: Record<string, string | undefined>) => {
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) {
+      search.set(key, value);
+    }
   });
+  const query = search.toString();
+  return `${apiUrl}${path}${query ? `?${query}` : ''}`;
+};
+
+type DemoState = {
+  rituals: Ritual[];
+  metrics: Metric[];
+  logs: LogEntry[];
+  tasks: Task[];
+  dailyStatus: DailyStatus;
+  focusId: string | null;
+  feedback: string;
+};
+
+type StoredUser = {
+  login: string;
+  language: string;
+};
+
+const buildDemoState = (data: ReturnType<typeof useLocale>['data'], feedback: string): DemoState => {
+  const now = new Date();
+  const dailyStatus: DailyStatus = {
+    completed: true,
+    intervalMs: 86_400_000,
+    nextResetAt: new Date(now.getTime() + 6 * 60 * 60 * 1000).toISOString(),
+    remainingMs: 0,
+  };
+
+  const rituals = data.demo.rituals.map((ritual) => ({
+    ...ritual,
+    completedAt: ritual.status === 'done' ? now.toISOString() : undefined,
+  }));
+
+  const logs = data.demo.logs.map((entry) => ({
+    ...entry,
+    createdAt: now.toISOString(),
+  }));
+
+  return {
+    rituals,
+    metrics: data.demo.metrics,
+    logs,
+    tasks: data.demo.tasks.map((task) => ({
+      ...task,
+      createdAt: now.toISOString(),
+    })),
+    dailyStatus,
+    focusId: rituals.find((ritual) => ritual.status === 'active')?.id ?? null,
+    feedback,
+  };
+};
 
 export default function HomePage() {
+  const router = useRouter();
+  const { t, locale, data } = useLocale();
   const ritualsRef = useRef<HTMLDivElement | null>(null);
   const authRef = useRef<HTMLDivElement | null>(null);
   const [rituals, setRituals] = useState<Ritual[]>([]);
@@ -36,11 +79,16 @@ export default function HomePage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [tasksError, setTasksError] = useState<string | null>(null);
   const [focusId, setFocusId] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState('Загружаем состояние...');
+  const [feedback, setFeedback] = useState(t('common.loading'));
   const [modeOpen, setModeOpen] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [dailyStatus, setDailyStatus] = useState<DailyStatus | null>(null);
   const [countdown, setCountdown] = useState('00:00:00');
+  const [user, setUser] = useState<StoredUser | null>(null);
+  const [userLoaded, setUserLoaded] = useState(false);
+
+  const isLocked = !user;
+  const modeSteps = data.hero.modeSteps;
 
   const progress = useMemo(() => {
     const total = rituals.length;
@@ -50,30 +98,82 @@ export default function HomePage() {
 
   const focusRitual = rituals.find((ritual) => ritual.id === focusId) ?? null;
 
+  const formatTime = (value: string) =>
+    new Intl.DateTimeFormat(data.common.dateLocale, {
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(value));
+
+  const updateStoredUser = (next: StoredUser) => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('lp-user', JSON.stringify(next));
+    }
+    setUser(next);
+  };
+
+  const handleLanguageUpdate = async (nextLocale: Locale) => {
+    if (!user) {
+      return;
+    }
+    updateStoredUser({ ...user, language: nextLocale });
+    await fetch(`${apiUrl}/v1/session/language`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ login: user.login, language: nextLocale }),
+    });
+  };
+
+  const requestParams = useMemo(
+    () => ({
+      lang: locale,
+      login: user?.login,
+    }),
+    [locale, user?.login],
+  );
+
   const fetchDailyStatus = async () => {
     try {
-      const response = await fetch(`${apiUrl}/v1/daily`);
+      const response = await fetch(buildUrl('/v1/daily', requestParams));
       if (!response.ok) {
-        throw new Error('Не удалось получить ежедневный ритм.');
+        throw new Error(t('errors.daily'));
       }
-      const data: DailyStatus = await response.json();
-      setDailyStatus(data);
+      const dataResponse: DailyStatus = await response.json();
+      setDailyStatus(dataResponse);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Ошибка ежедневного ритма.';
+      const message = error instanceof Error ? error.message : t('errors.dailyFallback');
       setLoadError(message);
     }
+  };
+
+  const pushLog = async (title: string, note: string) => {
+    const response = await fetch(`${apiUrl}/v1/logs`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ title, note }),
+    });
+
+    if (!response.ok) {
+      throw new Error(t('errors.log'));
+    }
+
+    const log: LogEntry = await response.json();
+    setLogEntries((prev) => [log, ...prev]);
   };
 
   const loadState = async () => {
     try {
       const [ritualsResponse, metricsResponse, logsResponse] = await Promise.all([
-        fetch(`${apiUrl}/v1/rituals`),
-        fetch(`${apiUrl}/v1/metrics`),
+        fetch(buildUrl('/v1/rituals', requestParams)),
+        fetch(buildUrl('/v1/metrics', requestParams)),
         fetch(`${apiUrl}/v1/logs`),
       ]);
 
       if (!ritualsResponse.ok || !metricsResponse.ok || !logsResponse.ok) {
-        throw new Error('Не удалось получить состояние.');
+        throw new Error(t('errors.state'));
       }
 
       const ritualsData: Ritual[] = await ritualsResponse.json();
@@ -89,20 +189,62 @@ export default function HomePage() {
       const active = ritualsData.find((ritual) => ritual.status === 'active') ?? null;
       setFocusId(active?.id ?? null);
       setFeedback(
-        ritualsData.length === 0
-          ? 'Нет активных рамок. Добавь первый шаг.'
-          : 'Нажми на любой ритуал, чтобы зафиксировать шаг.',
+        ritualsData.length === 0 ? t('rituals.feedbackEmpty') : t('rituals.feedbackChoose'),
       );
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Ошибка загрузки.';
+      const message = error instanceof Error ? error.message : t('errors.stateFallback');
       setLoadError(message);
-      setFeedback('Не удалось загрузить состояние.');
+      setFeedback(t('errors.stateFailed'));
+    }
+  };
+
+  const fetchTasks = async () => {
+    try {
+      const response = await fetch(buildUrl('/v1/tasks', requestParams));
+      if (!response.ok) {
+        throw new Error(t('errors.tasks'));
+      }
+      const dataResponse: Task[] = await response.json();
+      setTasks(dataResponse);
+      setTasksError(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t('errors.tasksFallback');
+      setTasksError(message);
     }
   };
 
   useEffect(() => {
-    void loadState();
+    const stored = typeof window !== 'undefined' ? window.localStorage.getItem('lp-user') : null;
+    if (stored) {
+      try {
+        setUser(JSON.parse(stored) as StoredUser);
+      } catch {
+        setUser(null);
+      }
+    }
+    setUserLoaded(true);
   }, []);
+
+  useEffect(() => {
+    if (!userLoaded) {
+      return;
+    }
+    setFeedback(t('common.loading'));
+    if (!user) {
+      const demoState = buildDemoState(data, t('rituals.feedbackChoose'));
+      setRituals(demoState.rituals);
+      setMetrics(demoState.metrics);
+      setLogEntries(demoState.logs);
+      setTasks(demoState.tasks);
+      setDailyStatus(demoState.dailyStatus);
+      setFocusId(demoState.focusId);
+      setFeedback(demoState.feedback);
+      setTasksError(null);
+      setLoadError(null);
+      return;
+    }
+    void loadState();
+  }, [userLoaded, user, locale, data, t]);
 
   useEffect(() => {
     if (!dailyStatus) {
@@ -110,10 +252,7 @@ export default function HomePage() {
     }
 
     const updateCountdown = () => {
-      const remaining = Math.max(
-        new Date(dailyStatus.nextResetAt).getTime() - Date.now(),
-        0,
-      );
+      const remaining = Math.max(new Date(dailyStatus.nextResetAt).getTime() - Date.now(), 0);
       const totalSeconds = Math.floor(remaining / 1000);
       const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
       const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
@@ -126,46 +265,22 @@ export default function HomePage() {
     return () => clearInterval(timer);
   }, [dailyStatus]);
 
-  const pushLog = async (title: string, note: string) => {
-    const response = await fetch(`${apiUrl}/v1/logs`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ title, note }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Не удалось зафиксировать шаг.');
-    }
-
-    const log: LogEntry = await response.json();
-    setLogEntries((prev) => [log, ...prev]);
-  };
-
-  const fetchTasks = async () => {
-    try {
-      const response = await fetch(`${apiUrl}/v1/tasks`);
-      if (!response.ok) {
-        throw new Error('Не удалось получить предложения.');
-      }
-      const data: Task[] = await response.json();
-      setTasks(data);
-      setTasksError(null);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Ошибка предложений.';
-      setTasksError(message);
-    }
+  const handleLockedAction = () => {
+    router.push('/auth');
   };
 
   const handleStartRitual = async () => {
+    if (isLocked) {
+      handleLockedAction();
+      return;
+    }
     try {
-      const response = await fetch(`${apiUrl}/v1/rituals/start`, {
+      const response = await fetch(buildUrl('/v1/rituals/start', requestParams), {
         method: 'POST',
       });
 
       if (!response.ok) {
-        throw new Error('Не удалось запустить ритуал.');
+        throw new Error(t('errors.startRitual'));
       }
 
       const updated: Ritual[] = await response.json();
@@ -173,38 +288,51 @@ export default function HomePage() {
       const active = updated.find((ritual) => ritual.status === 'active') ?? null;
       setFocusId(active?.id ?? null);
       if (active) {
-        setFeedback(`Старт мягкой сессии. Сейчас фокус: ${active.title}.`);
-        await pushLog('Сессия началась', `Фокус: ${active.title}.`);
+        setFeedback(t('feedback.startFocus', { title: active.title }));
+        await pushLog(t('logs.sessionStartedTitle'), t('logs.sessionStartedNote', { title: active.title }));
       }
       void fetchDailyStatus();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Ошибка запуска.';
+      const message = error instanceof Error ? error.message : t('errors.startRitual');
       setLoadError(message);
     }
   };
 
   const handleCompleteRitual = async (ritualId: string) => {
+    if (isLocked) {
+      handleLockedAction();
+      return;
+    }
     try {
-      const response = await fetch(`${apiUrl}/v1/rituals/${ritualId}/complete`, {
+      const response = await fetch(buildUrl(`/v1/rituals/${ritualId}/complete`, requestParams), {
         method: 'POST',
       });
 
       if (!response.ok) {
-        throw new Error('Не удалось завершить ритуал.');
+        throw new Error(t('errors.completeRitual'));
       }
 
       const updated: Ritual[] = await response.json();
       setRituals(updated);
       const completedRitual = updated.find((ritual) => ritual.id === ritualId);
       if (completedRitual) {
-        await pushLog(`Отмечено: ${completedRitual.title}`, 'Рамки удержаны без давления.');
+        await pushLog(
+          t('logs.ritualCompletedTitle', { title: completedRitual.title }),
+          t('logs.ritualCompletedNote'),
+        );
       }
       const next = updated.find((ritual) => ritual.status === 'active') ?? null;
       setFocusId(next?.id ?? null);
       const total = updated.length;
       const completed = updated.filter((ritual) => ritual.status === 'done').length;
-      setFeedback(`Зафиксировано: ${completedRitual?.title ?? 'ритуал'}. ${completed}/${total}.`);
-      const metricsResponse = await fetch(`${apiUrl}/v1/metrics`);
+      setFeedback(
+        t('feedback.complete', {
+          title: completedRitual?.title ?? t('feedback.completedFallback'),
+          completed,
+          total,
+        }),
+      );
+      const metricsResponse = await fetch(buildUrl('/v1/metrics', requestParams));
       if (metricsResponse.ok) {
         const metricsData: Metric[] = await metricsResponse.json();
         setMetrics(metricsData);
@@ -212,34 +340,42 @@ export default function HomePage() {
       void fetchDailyStatus();
       void fetchTasks();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Ошибка завершения.';
+      const message = error instanceof Error ? error.message : t('errors.completeRitual');
       setLoadError(message);
     }
   };
 
   const handleToggleMode = async () => {
+    if (isLocked) {
+      handleLockedAction();
+      return;
+    }
     setModeOpen((prev) => !prev);
     try {
-      await pushLog('Режим раскрыт', 'План дня показан без давления.');
+      await pushLog(t('logs.modeOpenedTitle'), t('logs.modeOpenedNote'));
     } catch {
-      // do nothing, log will be retried on next successful action
+      // ignore
     }
   };
 
   const handleSwipeTask = async (taskId: string) => {
+    if (isLocked) {
+      handleLockedAction();
+      return;
+    }
     try {
-      const response = await fetch(`${apiUrl}/v1/tasks/${taskId}/swipe`, {
+      const response = await fetch(buildUrl(`/v1/tasks/${taskId}/swipe`, requestParams), {
         method: 'POST',
       });
       if (!response.ok) {
-        throw new Error('Не удалось обновить предложение.');
+        throw new Error(t('errors.swapTask'));
       }
-      const data: Task[] = await response.json();
-      setTasks(data);
+      const dataResponse: Task[] = await response.json();
+      setTasks(dataResponse);
       setTasksError(null);
-      await pushLog('Задача заменена', 'Пользователь попросил другой мягкий шаг.');
+      await pushLog(t('logs.taskSwappedTitle'), t('logs.taskSwappedNote'));
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Ошибка замены задачи.';
+      const message = error instanceof Error ? error.message : t('errors.swapTask');
       setTasksError(message);
     }
   };
@@ -248,19 +384,38 @@ export default function HomePage() {
     <main className="page">
       <section className="hero">
         <div className="hero__content">
-          <p className="badge">Life Protocol · v2.1</p>
-          <h1>Система, которая держит тебя, когда всё шумит.</h1>
-          <p className="subtitle">
-            Мы не требуем. Мы бережно создаём рамки, в которых воля возвращается сама.
-          </p>
+          <div className="hero__header">
+            <p className="badge">{data.hero.badge}</p>
+            <LanguageSwitcher onChange={handleLanguageUpdate} />
+          </div>
+          <h1>{data.hero.title}</h1>
+          <p className="subtitle">{data.hero.subtitle}</p>
           <div className="hero__actions">
-            <button className="primary" type="button" onClick={handleStartRitual}>
-              Начать ритуал
+            <button
+              className={isLocked ? 'primary primary--disabled' : 'primary'}
+              type="button"
+              onClick={handleStartRitual}
+              aria-disabled={isLocked}
+            >
+              {data.hero.start}
             </button>
-            <button className="ghost" type="button" onClick={handleToggleMode}>
-              {modeOpen ? 'Скрыть мой режим' : 'Показать мой режим'}
+            <button
+              className={isLocked ? 'ghost ghost--disabled' : 'ghost'}
+              type="button"
+              onClick={handleToggleMode}
+              aria-disabled={isLocked}
+            >
+              {modeOpen ? data.hero.hideMode : data.hero.showMode}
             </button>
           </div>
+          {isLocked && (
+            <div className="lock">
+              <p>{data.lock.hint}</p>
+              <Link className="ghost" href="/auth">
+                {data.lock.cta}
+              </Link>
+            </div>
+          )}
           {modeOpen && (
             <div className="mode">
               {modeSteps.map((step) => (
@@ -274,11 +429,11 @@ export default function HomePage() {
           {loadError && <p className="auth__error">{loadError}</p>}
         </div>
         <div className="hero__card">
-          <h2>Состояние сейчас</h2>
-          <p className="muted">Нейтральная фиксация вместо оценки.</p>
+          <h2>{data.hero.stateTitle}</h2>
+          <p className="muted">{data.hero.stateSubtitle}</p>
           <div className="metrics">
             {metrics.length === 0 ? (
-              <p className="muted">Метрики загружаются...</p>
+              <p className="muted">{data.metrics.loading}</p>
             ) : (
               metrics.map((metric) => (
                 <div key={metric.label} className="metric">
@@ -290,7 +445,7 @@ export default function HomePage() {
           </div>
           <div className="progress">
             <div className="progress__head">
-              <span>Ритм сегодня</span>
+              <span>{data.metrics.progressLabel}</span>
               <strong>
                 {progress.completed}/{progress.total}
               </strong>
@@ -301,16 +456,18 @@ export default function HomePage() {
           </div>
           {dailyStatus?.completed && (
             <div className="countdown">
-              <div className="countdown__icon">⏳</div>
+              <div className="countdown__icon" aria-label={data.metrics.countdownIconLabel}>
+                ⏳
+              </div>
               <div>
-                <p>Все рамки выполнены. До нового цикла:</p>
+                <p>{data.metrics.completedLabel}</p>
                 <strong>{countdown}</strong>
               </div>
             </div>
           )}
           <div className="pulse">
             <div className="pulse__dot" />
-            <p>AI рядом. Он удерживает ритм.</p>
+            <p>{data.common.aiPulse}</p>
           </div>
         </div>
       </section>
@@ -318,12 +475,12 @@ export default function HomePage() {
       <section className="rituals" ref={ritualsRef}>
         <div className="rituals__header">
           <div>
-            <h2>Сегодняшние мягкие рамки</h2>
+            <h2>{data.rituals.title}</h2>
             <p className="feedback">{feedback}</p>
           </div>
           {focusRitual && (
             <div className="focus">
-              <p className="focus__label">Текущий фокус</p>
+              <p className="focus__label">{data.rituals.focusLabel}</p>
               <h3>{focusRitual.title}</h3>
               <p>{focusRitual.detail}</p>
             </div>
@@ -331,7 +488,7 @@ export default function HomePage() {
         </div>
         <div className="rituals__grid">
           {rituals.length === 0 ? (
-            <p className="muted">Ритуалы загружаются...</p>
+            <p className="muted">{data.rituals.loading}</p>
           ) : (
             rituals.map((ritual) => (
               <article key={ritual.title} className={`ritual ritual--${ritual.status}`}>
@@ -341,24 +498,26 @@ export default function HomePage() {
                 </div>
                 <div className="ritual__meta">
                   <span>{ritual.duration}</span>
-                  {ritual.status === 'done' ? <span>Готово</span> : <span>Мягкий шаг</span>}
+                  {ritual.status === 'done' ? <span>{data.rituals.statusDone}</span> : <span>{data.rituals.statusSoft}</span>}
                 </div>
                 <button
-                  className={ritual.status === 'done' ? 'ghost ghost--disabled' : 'ghost'}
+                  className={
+                    ritual.status === 'done' || isLocked ? 'ghost ghost--disabled' : 'ghost'
+                  }
                   type="button"
                   onClick={() => handleCompleteRitual(ritual.id)}
-                  disabled={ritual.status === 'done'}
+                  aria-disabled={ritual.status === 'done' || isLocked}
                 >
-                  {ritual.status === 'done' ? 'Отмечено' : 'Я сделаю это'}
+                  {ritual.status === 'done' ? data.rituals.buttonDone : data.rituals.buttonDo}
                 </button>
               </article>
             ))
           )}
         </div>
         <div className="log">
-          <h3>Лента фиксаций</h3>
+          <h3>{data.rituals.logTitle}</h3>
           {logEntries.length === 0 ? (
-            <p className="muted">Пока тишина. Первый шаг появится здесь.</p>
+            <p className="muted">{data.rituals.logEmpty}</p>
           ) : (
             <ul>
               {logEntries.map((entry) => (
@@ -375,15 +534,13 @@ export default function HomePage() {
 
       <section className="tasks">
         <div className="tasks__header">
-          <h2>Мягкие предложения на сегодня</h2>
-          <p className="muted">
-            Они рождаются из твоего прогресса. Если не откликается — свайпни, система подстроится.
-          </p>
+          <h2>{data.tasks.title}</h2>
+          <p className="muted">{data.tasks.subtitle}</p>
         </div>
         {tasksError && <p className="auth__error">{tasksError}</p>}
         <div className="tasks__grid">
           {tasks.length === 0 ? (
-            <p className="muted">AI подбирает предложения...</p>
+            <p className="muted">{data.tasks.loading}</p>
           ) : (
             tasks.map((task) => (
               <article key={task.id} className="task-card">
@@ -391,8 +548,13 @@ export default function HomePage() {
                   <h3>{task.title}</h3>
                   <p>{task.detail}</p>
                 </div>
-                <button className="ghost" type="button" onClick={() => handleSwipeTask(task.id)}>
-                  Не моё — заменить
+                <button
+                  className={isLocked ? 'ghost ghost--disabled' : 'ghost'}
+                  type="button"
+                  onClick={() => handleSwipeTask(task.id)}
+                  aria-disabled={isLocked}
+                >
+                  {data.tasks.swap}
                 </button>
               </article>
             ))
@@ -402,14 +564,11 @@ export default function HomePage() {
 
       <section className="cta" ref={authRef}>
         <div>
-          <h2>Ты не обязан справляться в одиночку.</h2>
-          <p>
-            Life Protocol удерживает пространство, пока ты возвращаешь устойчивость. Без давления и
-            сравнения.
-          </p>
+          <h2>{data.cta.title}</h2>
+          <p>{data.cta.subtitle}</p>
         </div>
         <Link className="primary" href="/auth">
-          Войти или создать профиль
+          {data.cta.action}
         </Link>
       </section>
     </main>

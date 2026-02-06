@@ -1,9 +1,11 @@
 import './globals.css';
 import type { Metadata } from 'next';
+import { LocaleProvider } from './lib/i18n';
+import defaultLocale from './lib/locales/ru.json';
 
 export const metadata: Metadata = {
-  title: 'Life Protocol',
-  description: 'Lifestyle guidance system prototype',
+  title: defaultLocale.meta.title,
+  description: defaultLocale.meta.description,
   manifest: '/manifest.webmanifest',
 };
 
@@ -13,9 +15,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ru">
+    <html lang="ru" suppressHydrationWarning>
       <body>
-        {children}
+        <LocaleProvider>{children}</LocaleProvider>
       </body>
     </html>
   );

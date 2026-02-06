@@ -6,4 +6,7 @@ export class AuthRequestDto {
 
   @ApiProperty({ example: 'supersecret' })
   password: string;
+
+  @ApiProperty({ example: 'ru', required: false })
+  language?: string;
 }

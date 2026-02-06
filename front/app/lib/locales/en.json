@@ -1,0 +1,176 @@
+{
+  "meta": {
+    "title": "Life Protocol",
+    "description": "Lifestyle guidance system prototype"
+  },
+  "common": {
+    "dateLocale": "en-US",
+    "loading": "Loading state...",
+    "aiPulse": "AI is nearby. It holds the rhythm."
+  },
+  "language": {
+    "label": "Language",
+    "options": {
+      "ru": "Русский",
+      "en": "English",
+      "es": "Español"
+    }
+  },
+  "hero": {
+    "badge": "Life Protocol · v2.1",
+    "title": "A system that holds you when everything is loud.",
+    "subtitle": "We do not demand. We gently build frames where willpower returns on its own.",
+    "start": "Start ritual",
+    "showMode": "Show my mode",
+    "hideMode": "Hide my mode",
+    "stateTitle": "State right now",
+    "stateSubtitle": "Neutral check-in instead of judgment.",
+    "modeSteps": [
+      {
+        "title": "Morning without pressure",
+        "detail": "Three minutes of quiet so the system knows you're here."
+      },
+      {
+        "title": "Day within frames",
+        "detail": "One body check-in and one micro-step in reality."
+      },
+      {
+        "title": "Evening closure",
+        "detail": "A short state check without evaluation."
+      }
+    ]
+  },
+  "metrics": {
+    "loading": "Loading metrics...",
+    "progressLabel": "Today's rhythm",
+    "completedLabel": "All frames completed. Until the next cycle:",
+    "countdownIconLabel": "Countdown"
+  },
+  "rituals": {
+    "title": "Today's gentle frames",
+    "feedbackEmpty": "No active frames. Add the first step.",
+    "feedbackChoose": "Tap any ritual to log the step.",
+    "focusLabel": "Current focus",
+    "loading": "Loading rituals...",
+    "statusDone": "Done",
+    "statusSoft": "Soft step",
+    "buttonDone": "Marked",
+    "buttonDo": "I'll do this",
+    "logTitle": "Log of check-ins",
+    "logEmpty": "Silence so far. The first step will appear here."
+  },
+  "tasks": {
+    "title": "Gentle suggestions for today",
+    "subtitle": "They grow out of your progress. If it doesn't resonate — swipe and the system will adapt.",
+    "loading": "AI is picking suggestions...",
+    "swap": "Not mine — replace"
+  },
+  "cta": {
+    "title": "You don't have to do this alone.",
+    "subtitle": "Life Protocol holds the space while you regain stability. No pressure, no comparison.",
+    "action": "Sign in or create a profile"
+  },
+  "auth": {
+    "badge": "Life Protocol · access",
+    "title": "First, we'll gently check the access frame.",
+    "subtitle": "If you're here for the first time, we'll create a profile. If you've been here before, we'll confirm presence.",
+    "cardTitle": "Authentication",
+    "cardSubtitle": "No hidden judgment. Only entry into the space.",
+    "loginLabel": "Login",
+    "passwordLabel": "Password",
+    "loginPlaceholder": "life@protocol",
+    "passwordPlaceholder": "••••••••",
+    "submit": "Confirm",
+    "submitting": "Checking...",
+    "result": "%message% User: %login%.",
+    "back": "Back to home"
+  },
+  "errors": {
+    "daily": "Failed to load daily rhythm.",
+    "dailyFallback": "Daily rhythm error.",
+    "state": "Failed to load state.",
+    "stateFallback": "Load error.",
+    "stateFailed": "Unable to load state.",
+    "log": "Unable to log the step.",
+    "tasks": "Failed to load suggestions.",
+    "tasksFallback": "Suggestion error.",
+    "startRitual": "Unable to start ritual.",
+    "completeRitual": "Unable to complete ritual.",
+    "swapTask": "Unable to refresh suggestion.",
+    "authServer": "Server temporarily unavailable.",
+    "authFallback": "Unable to connect."
+  },
+  "feedback": {
+    "startFocus": "Soft session started. Focus now: %title%.",
+    "complete": "Logged: %title%. %completed%/%total%.",
+    "completedFallback": "ritual"
+  },
+  "logs": {
+    "sessionStartedTitle": "Session started",
+    "sessionStartedNote": "Focus: %title%.",
+    "ritualCompletedTitle": "Marked: %title%",
+    "ritualCompletedNote": "Frames held without pressure.",
+    "modeOpenedTitle": "Mode opened",
+    "modeOpenedNote": "The day plan was shown without pressure.",
+    "taskSwappedTitle": "Task replaced",
+    "taskSwappedNote": "The user asked for another gentle step."
+  },
+  "lock": {
+    "hint": "Actions are available after sign-in.",
+    "cta": "Go to sign-in"
+  },
+  "demo": {
+    "metrics": [
+      { "label": "Sleep", "value": "Stable" },
+      { "label": "Inner noise", "value": "Lowering" },
+      { "label": "Mode", "value": "Forming" }
+    ],
+    "rituals": [
+      {
+        "id": "demo-breath",
+        "title": "4-4 breathing",
+        "detail": "Take four soft inhales and exhales. No rush.",
+        "duration": "2 minutes",
+        "status": "idle"
+      },
+      {
+        "id": "demo-water",
+        "title": "Water + warmth",
+        "detail": "One glass of water and a warm pause in the body.",
+        "duration": "3 minutes",
+        "status": "active"
+      },
+      {
+        "id": "demo-step",
+        "title": "Micro-step",
+        "detail": "One micro-step that steadies the day.",
+        "duration": "5 minutes",
+        "status": "idle"
+      }
+    ],
+    "tasks": [
+      {
+        "id": "demo-task-1",
+        "title": "One soft breath",
+        "detail": "Pause for 20 seconds and track your breathing."
+      },
+      {
+        "id": "demo-task-2",
+        "title": "Warm pause",
+        "detail": "Touch a cup or blanket and let the body feel safe."
+      },
+      {
+        "id": "demo-task-3",
+        "title": "Micro-choice",
+        "detail": "Pick one pleasant item for today."
+      }
+    ],
+    "logs": [
+      {
+        "id": "demo-log-1",
+        "title": "Rhythm accepted",
+        "note": "The system is already near, steps get softer."
+      }
+    ]
+  }
+}

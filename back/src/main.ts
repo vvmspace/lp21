@@ -7,7 +7,6 @@ async function bootstrap() {
 
   const config = new DocumentBuilder()
     .setTitle('Life Protocol API')
-    .setDescription('API для прототипа Life Protocol')
     .setVersion('v1')
     .addServer('/api/v1')
     .build();

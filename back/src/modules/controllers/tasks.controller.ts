@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post } from '@nestjs/common';
+import { Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { TasksService } from '../services/tasks.service';
 import { TaskDto } from '../dtos/task.dto';
@@ -10,13 +10,20 @@ export class TasksController {
 
   @Get()
   @ApiOkResponse({ type: TaskDto, isArray: true })
-  async getTasks(): Promise<TaskDto[]> {
-    return this.tasksService.getTasks();
+  async getTasks(
+    @Query('lang') language?: string,
+    @Query('login') login?: string,
+  ): Promise<TaskDto[]> {
+    return this.tasksService.getTasks(language, login);
   }
 
   @Post(':id/swipe')
   @ApiOkResponse({ type: TaskDto, isArray: true })
-  async swipeTask(@Param('id') id: string): Promise<TaskDto[]> {
-    return this.tasksService.swipeTask(id);
+  async swipeTask(
+    @Param('id') id: string,
+    @Query('lang') language?: string,
+    @Query('login') login?: string,
+  ): Promise<TaskDto[]> {
+    return this.tasksService.swipeTask(id, language, login);
   }
 }
