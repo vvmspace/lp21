@@ -1,0 +1,37 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:-life_protocol}
+      POSTGRES_USER: ${DB_USER:-life_protocol}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-life_protocol}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  back:
+    build:
+      context: ./back
+    env_file: .env
+    environment:
+      DAILY_TASK_INTERVAL_MS: 86400000
+      DB_HOST: db
+    depends_on:
+      - db
+    ports:
+      - "${BACK_PORT:-3001}:3001"
+
+  front:
+    build:
+      context: ./front
+    env_file: .env
+    environment:
+      BACKEND_URL: http://back:3001
+    ports:
+      - "${FRONT_PORT:-3000}:3000"
+
+volumes:
+  db_data:
