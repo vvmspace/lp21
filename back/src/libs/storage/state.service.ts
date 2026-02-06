@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { loadState, saveState, type LogEntry, type Ritual, type State } from './state';
+import { loadState, saveState, type LogEntry, type Ritual, type State, type Task } from './state';
 
 @Injectable()
 export class StateService {
@@ -39,6 +39,46 @@ export class StateService {
   getRituals(): Ritual[] {
     this.checkDailyReset();
     return this.state.rituals;
+  }
+
+  getTasks(): Task[] {
+    this.checkDailyReset();
+    return this.state.tasks;
+  }
+
+  setTasks(tasks: Task[]): Task[] {
+    this.state.tasks = tasks;
+    saveState(this.state);
+    return this.state.tasks;
+  }
+
+  addTask(task: Task): Task {
+    this.state.tasks = [task, ...this.state.tasks];
+    saveState(this.state);
+    return task;
+  }
+
+  removeTask(taskId: string): Task | null {
+    const index = this.state.tasks.findIndex((task) => task.id === taskId);
+    if (index === -1) {
+      return null;
+    }
+    const [removed] = this.state.tasks.splice(index, 1);
+    saveState(this.state);
+    return removed;
+  }
+
+  getProgressSummary(): {
+    ritualsTotal: number;
+    ritualsCompleted: number;
+    logsCount: number;
+    completionRatio: number;
+  } {
+    const ritualsTotal = this.state.rituals.length;
+    const ritualsCompleted = this.state.rituals.filter((ritual) => ritual.status === 'done').length;
+    const logsCount = this.state.logs.length;
+    const completionRatio = ritualsTotal === 0 ? 0 : ritualsCompleted / ritualsTotal;
+    return { ritualsTotal, ritualsCompleted, logsCount, completionRatio };
   }
 
   completeRitual(id: string): Ritual[] {
@@ -192,6 +232,7 @@ export class StateService {
       },
       ...this.state.logs,
     ];
+    this.state.tasks = [];
     saveState(this.state);
   }
 }

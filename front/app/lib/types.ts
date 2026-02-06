@@ -21,6 +21,13 @@ export type Metric = {
   value: string;
 };
 
+export type Task = {
+  id: string;
+  title: string;
+  detail: string;
+  createdAt: string;
+};
+
 export type DailyStatus = {
   completed: boolean;
   intervalMs: number;

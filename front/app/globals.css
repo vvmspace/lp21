@@ -348,6 +348,44 @@ h1 {
   color: #9aa4b3;
 }
 
+.tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.tasks__header {
+  display: grid;
+  gap: 8px;
+}
+
+.tasks__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
+}
+
+.task-card {
+  padding: 20px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(140, 152, 255, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 200px;
+  justify-content: space-between;
+}
+
+.task-card h3 {
+  margin-bottom: 6px;
+}
+
+.task-card p {
+  color: #c1c6cf;
+  line-height: 1.5;
+}
+
 .cta {
   display: flex;
   flex-direction: column;

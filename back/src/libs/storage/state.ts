@@ -19,6 +19,13 @@ export type LogEntry = {
   createdAt: string;
 };
 
+export type Task = {
+  id: string;
+  title: string;
+  detail: string;
+  createdAt: string;
+};
+
 export type User = {
   login: string;
   password: string;
@@ -29,6 +36,7 @@ export type State = {
   users: Record<string, User>;
   rituals: Ritual[];
   logs: LogEntry[];
+  tasks: Task[];
   daily: {
     lastResetAt: string;
     nextResetAt: string;
@@ -64,6 +72,7 @@ const createDefaultState = (intervalMs: number): State => {
       },
     ],
     logs: [],
+    tasks: [],
     daily: {
       lastResetAt: now.toISOString(),
       nextResetAt: nextReset.toISOString(),
@@ -91,10 +100,11 @@ export const loadState = (): State => {
   const raw = readFileSync(statePath, 'utf-8');
   try {
     const parsed = JSON.parse(raw) as State;
-    if (!parsed.daily) {
+    if (!parsed.daily || !parsed.tasks) {
       const defaultState = createDefaultState(intervalMs);
       const merged: State = {
         ...parsed,
+        tasks: parsed.tasks ?? defaultState.tasks,
         daily: defaultState.daily,
       };
       writeFileSync(statePath, JSON.stringify(merged, null, 2), 'utf-8');

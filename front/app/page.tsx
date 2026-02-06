@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { DailyStatus, LogEntry, Metric, Ritual } from './lib/types';
+import type { DailyStatus, LogEntry, Metric, Ritual, Task } from './lib/types';
 
 const modeSteps = [
   {
@@ -33,6 +33,8 @@ export default function HomePage() {
   const [rituals, setRituals] = useState<Ritual[]>([]);
   const [metrics, setMetrics] = useState<Metric[]>([]);
   const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasksError, setTasksError] = useState<string | null>(null);
   const [focusId, setFocusId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState('Загружаем состояние...');
   const [modeOpen, setModeOpen] = useState(false);
@@ -82,6 +84,7 @@ export default function HomePage() {
       setMetrics(metricsData);
       setLogEntries(logsData);
       void fetchDailyStatus();
+      void fetchTasks();
 
       const active = ritualsData.find((ritual) => ritual.status === 'active') ?? null;
       setFocusId(active?.id ?? null);
@@ -140,6 +143,21 @@ export default function HomePage() {
     setLogEntries((prev) => [log, ...prev]);
   };
 
+  const fetchTasks = async () => {
+    try {
+      const response = await fetch(`${apiUrl}/v1/tasks`);
+      if (!response.ok) {
+        throw new Error('Не удалось получить предложения.');
+      }
+      const data: Task[] = await response.json();
+      setTasks(data);
+      setTasksError(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Ошибка предложений.';
+      setTasksError(message);
+    }
+  };
+
   const handleStartRitual = async () => {
     try {
       const response = await fetch(`${apiUrl}/v1/rituals/start`, {
@@ -192,6 +210,7 @@ export default function HomePage() {
         setMetrics(metricsData);
       }
       void fetchDailyStatus();
+      void fetchTasks();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Ошибка завершения.';
       setLoadError(message);
@@ -204,6 +223,24 @@ export default function HomePage() {
       await pushLog('Режим раскрыт', 'План дня показан без давления.');
     } catch {
       // do nothing, log will be retried on next successful action
+    }
+  };
+
+  const handleSwipeTask = async (taskId: string) => {
+    try {
+      const response = await fetch(`${apiUrl}/v1/tasks/${taskId}/swipe`, {
+        method: 'POST',
+      });
+      if (!response.ok) {
+        throw new Error('Не удалось обновить предложение.');
+      }
+      const data: Task[] = await response.json();
+      setTasks(data);
+      setTasksError(null);
+      await pushLog('Задача заменена', 'Пользователь попросил другой мягкий шаг.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Ошибка замены задачи.';
+      setTasksError(message);
     }
   };
 
@@ -332,6 +369,33 @@ export default function HomePage() {
                 </li>
               ))}
             </ul>
+          )}
+        </div>
+      </section>
+
+      <section className="tasks">
+        <div className="tasks__header">
+          <h2>Мягкие предложения на сегодня</h2>
+          <p className="muted">
+            Они рождаются из твоего прогресса. Если не откликается — свайпни, система подстроится.
+          </p>
+        </div>
+        {tasksError && <p className="auth__error">{tasksError}</p>}
+        <div className="tasks__grid">
+          {tasks.length === 0 ? (
+            <p className="muted">AI подбирает предложения...</p>
+          ) : (
+            tasks.map((task) => (
+              <article key={task.id} className="task-card">
+                <div>
+                  <h3>{task.title}</h3>
+                  <p>{task.detail}</p>
+                </div>
+                <button className="ghost" type="button" onClick={() => handleSwipeTask(task.id)}>
+                  Не моё — заменить
+                </button>
+              </article>
+            ))
           )}
         </div>
       </section>
