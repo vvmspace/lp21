@@ -92,8 +92,10 @@ export const LocaleProvider = ({ children }: { children: React.ReactNode }) => {
         if (!response.ok) {
           return;
         }
-        const dataResponse = (await response.json()) as { languages: LanguageOption[] };
-        if (dataResponse.languages?.length) {
+        const dataResponse = (await response
+          .json()
+          .catch(() => null)) as { languages?: LanguageOption[] } | null;
+        if (dataResponse?.languages?.length) {
           setLanguages(dataResponse.languages);
         }
       } catch {
