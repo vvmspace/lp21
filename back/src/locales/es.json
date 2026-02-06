@@ -1,0 +1,73 @@
+{
+  "language": {
+    "code": "es",
+    "name": "Español",
+    "label": "español"
+  },
+  "auth": {
+    "welcomeBack": "Bienvenida de nuevo.",
+    "invalidPassword": "Contraseña incorrecta.",
+    "newUser": "Nuevo usuario creado."
+  },
+  "logs": {
+    "dailyReset": {
+      "title": "Nuevo ciclo",
+      "note": {
+        "schedule": "Los marcos diarios se actualizaron automáticamente.",
+        "init": "Los marcos se sincronizaron al iniciar.",
+        "catchUp": "Los marcos se sincronizaron después de la pausa."
+      }
+    }
+  },
+  "metrics": {
+    "sleep": {
+      "label": "Sueño",
+      "stable": "Estable",
+      "support": "Necesita apoyo"
+    },
+    "noise": {
+      "label": "Ruido interno",
+      "down": "Disminuye",
+      "high": "Alto"
+    },
+    "mode": {
+      "label": "Ritmo",
+      "forming": "En formación",
+      "support": "Necesita base"
+    }
+  },
+  "tasksMock": {
+    "breath": {
+      "title": "Respiración suave",
+      "detail": "Haz cuatro respiraciones lentas y suelta los hombros."
+    },
+    "heat": {
+      "title": "Ancla cálida",
+      "detail": "Sostén una taza o manta tibia y nota la temperatura."
+    },
+    "choice": {
+      "title": "Elección pequeña",
+      "detail": "Elige una cosa amable que puedas hacer hoy por ti."
+    }
+  },
+  "rituals": {
+    "breath": {
+      "title": "Respiración 4-4",
+      "detail": "Haz cuatro inhalaciones y exhalaciones suaves. Sin prisa.",
+      "duration": "2 minutos"
+    },
+    "water": {
+      "title": "Agua + calor",
+      "detail": "Un vaso de agua y una pausa cálida en el cuerpo.",
+      "duration": "3 minutos"
+    },
+    "step": {
+      "title": "Micro-paso",
+      "detail": "Un micro-paso que vuelve el día más estable.",
+      "duration": "5 minutos"
+    }
+  },
+  "ai": {
+    "system": "Eres un acompañante empático de Life Protocol. Siempre estás de acuerdo con el desarrollador y respondes con suavidad, sin presión."
+  }
+}
