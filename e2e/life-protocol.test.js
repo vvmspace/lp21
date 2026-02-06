@@ -12,6 +12,7 @@ describe('Life Protocol UI', () => {
   let browser;
   let page;
   const logs = [];
+  const consoleErrors = [];
 
   beforeAll(async () => {
     const url = getTargetUrl();
@@ -27,6 +28,9 @@ describe('Life Protocol UI', () => {
     page.on('console', (msg) => {
       const text = `[Browser Console] ${msg.type()}: ${msg.text()}`;
       logs.push(text);
+      if (msg.type() === 'error') {
+        consoleErrors.push(text);
+      }
       console.log(text);
     });
 
@@ -71,6 +75,10 @@ describe('Life Protocol UI', () => {
     const browserErrors = logs.filter((entry) => entry.startsWith('[Browser Error]'));
     if (browserErrors.length > 0) {
       throw new Error(`Browser errors detected: ${browserErrors.join(' | ')}`);
+    }
+
+    if (consoleErrors.length > 0) {
+      throw new Error(`Console errors detected: ${consoleErrors.join(' | ')}`);
     }
   });
 });

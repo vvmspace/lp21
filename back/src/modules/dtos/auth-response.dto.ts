@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { UserEntity } from '../entities/user.entity';
 
 export class AuthResponseDto {
@@ -8,6 +8,6 @@ export class AuthResponseDto {
   @ApiProperty()
   message: string;
 
-  @ApiProperty({ type: UserEntity })
-  user: UserEntity;
+  @ApiPropertyOptional({ type: UserEntity })
+  user?: UserEntity;
 }

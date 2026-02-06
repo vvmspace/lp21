@@ -169,11 +169,15 @@ export class StateService {
     ];
   }
 
-  authenticate(login: string, password: string, language?: string): {
-    success: boolean;
-    message: string;
-    user: { login: string; createdAt: string; language: string };
-  } {
+        ...(success
+          ? {
+              user: {
+                login,
+                createdAt: existing.created_at,
+                language: existing.language ?? locale,
+              },
+            }
+          : {}),
     const locale = resolveLocale(language);
     const existing = this.state.users[login];
 

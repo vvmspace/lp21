@@ -40,6 +40,11 @@ export default function AuthPage() {
       }
 
       const dataResponse: AuthResponse = await response.json();
+      if (!dataResponse.success) {
+        setAuthError(dataResponse.message || t('errors.authFallback'));
+        return;
+      }
+
       const loginValue = dataResponse.user?.login ?? authForm.login;
       const userLanguage = dataResponse.user?.language ?? locale;
       const payload = { login: loginValue, language: userLanguage };
