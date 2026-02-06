@@ -1,0 +1,13 @@
+{
+  "name": "life-protocol-e2e",
+  "version": "0.0.1",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "test": "jest --runInBand"
+  },
+  "dependencies": {
+    "jest": "^29.7.0",
+    "puppeteer": "^22.13.1"
+  }
+}

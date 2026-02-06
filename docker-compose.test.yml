@@ -1,0 +1,17 @@
+version: '3.9'
+
+services:
+  front:
+    build:
+      context: ./front
+    env_file: .env
+    ports:
+      - "${FRONT_PORT:-3000}:3000"
+
+  e2e:
+    build:
+      context: ./e2e
+    env_file: .env
+    depends_on:
+      - front
+    entrypoint: ["npm", "run", "test", "--", "--url=http://front:3000"]
