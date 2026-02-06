@@ -56,9 +56,9 @@ export default function HomePage() {
       minute: '2-digit',
     }).format(new Date(value));
 
-  const authHeaders: HeadersInit = useMemo(() => {
+  const authHeaders: HeadersInit = useMemo((): HeadersInit => {
     if (!authUser) {
-      return {};
+      return {} as HeadersInit;
     }
     return {
       'x-auth-login': authUser.login,
