@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 
 type RitualStatus = 'idle' | 'active' | 'done';
 
@@ -17,38 +17,13 @@ type LogEntry = {
   id: string;
   title: string;
   note: string;
-  timestamp: string;
+  createdAt: string;
 };
 
-const initialRituals: Ritual[] = [
-  {
-    id: 'breath',
-    title: 'Дыхание 4-4',
-    detail: 'Сделай четыре мягких вдоха и выдоха. Мы не спешим.',
-    duration: '2 минуты',
-    status: 'idle',
-  },
-  {
-    id: 'water',
-    title: 'Вода + тепло',
-    detail: 'Один стакан воды и тёплая пауза в теле.',
-    duration: '3 минуты',
-    status: 'idle',
-  },
-  {
-    id: 'step',
-    title: 'Мини-шаг',
-    detail: 'Один микрошаг, который делает день устойчивее.',
-    duration: '5 минут',
-    status: 'idle',
-  },
-];
-
-const metrics = [
-  { label: 'Сон', value: 'Стабильный' },
-  { label: 'Внутренний шум', value: 'Снижается' },
-  { label: 'Режим', value: 'Формируется' },
-];
+type Metric = {
+  label: string;
+  value: string;
+};
 
 const modeSteps = [
   {
@@ -67,103 +42,154 @@ const modeSteps = [
 
 const apiUrl = '/api';
 
+const formatTime = (value: string) =>
+  new Date(value).toLocaleTimeString('ru-RU', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
 export default function HomePage() {
   const ritualsRef = useRef<HTMLDivElement | null>(null);
   const authRef = useRef<HTMLDivElement | null>(null);
-  const [rituals, setRituals] = useState<Ritual[]>(initialRituals);
-  const [focusId, setFocusId] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState('Нажми на любой ритуал, чтобы зафиксировать шаг.');
-  const [modeOpen, setModeOpen] = useState(false);
+  const [rituals, setRituals] = useState<Ritual[]>([]);
+  const [metrics, setMetrics] = useState<Metric[]>([]);
   const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
+  const [focusId, setFocusId] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState('Загружаем состояние...');
+  const [modeOpen, setModeOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [authForm, setAuthForm] = useState({ login: '', password: '' });
   const [authResult, setAuthResult] = useState<string | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const progress = useMemo(() => {
     const total = rituals.length;
     const completed = rituals.filter((ritual) => ritual.status === 'done').length;
-    return { total, completed, percent: Math.round((completed / total) * 100) };
+    return { total, completed, percent: total === 0 ? 0 : Math.round((completed / total) * 100) };
   }, [rituals]);
 
   const focusRitual = rituals.find((ritual) => ritual.id === focusId) ?? null;
 
-  const addLogEntry = (entry: Omit<LogEntry, 'id' | 'timestamp'>) => {
-    const now = new Date();
-    const timestamp = now.toLocaleTimeString('ru-RU', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-    setLogEntries((prev) => [
-      {
-        id: `${entry.title}-${now.getTime()}`,
-        timestamp,
-        ...entry,
-      },
-      ...prev,
-    ]);
-  };
+  const loadState = async () => {
+    try {
+      const [ritualsResponse, metricsResponse, logsResponse] = await Promise.all([
+        fetch(`${apiUrl}/v1/rituals`),
+        fetch(`${apiUrl}/v1/metrics`),
+        fetch(`${apiUrl}/v1/logs`),
+      ]);
 
-  const handleStartRitual = () => {
-    const next = rituals.find((ritual) => ritual.status !== 'done') ?? rituals[0];
-    setRituals((prev) =>
-      prev.map((ritual) => ({
-        ...ritual,
-        status: ritual.id === next.id ? 'active' : ritual.status === 'done' ? 'done' : 'idle',
-      })),
-    );
-    setFocusId(next.id);
-    setFeedback(`Старт мягкой сессии. Сейчас фокус: ${next.title}.`);
-    addLogEntry({
-      title: 'Сессия началась',
-      note: `Фокус: ${next.title}.`,
-    });
-    ritualsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
+      if (!ritualsResponse.ok || !metricsResponse.ok || !logsResponse.ok) {
+        throw new Error('Не удалось получить состояние.');
+      }
 
-  const handleCompleteRitual = (ritualId: string) => {
-    const completedRitual = rituals.find((ritual) => ritual.id === ritualId);
-    if (!completedRitual) return;
+      const ritualsData: Ritual[] = await ritualsResponse.json();
+      const metricsData: Metric[] = await metricsResponse.json();
+      const logsData: LogEntry[] = await logsResponse.json();
 
-    setRituals((prev) =>
-      prev.map((ritual) =>
-        ritual.id === ritualId
-          ? { ...ritual, status: 'done', completedAt: new Date().toISOString() }
-          : ritual,
-      ),
-    );
-    addLogEntry({
-      title: `Отмечено: ${completedRitual.title}`,
-      note: 'Рамки удержаны без давления.',
-    });
-    setFeedback(`Зафиксировано: ${completedRitual.title}. ${progress.completed + 1}/${progress.total}.`);
+      setRituals(ritualsData);
+      setMetrics(metricsData);
+      setLogEntries(logsData);
 
-    const remaining = rituals.filter((ritual) => ritual.id !== ritualId && ritual.status !== 'done');
-    if (remaining.length > 0) {
-      const next = remaining[0];
-      setFocusId(next.id);
-      setRituals((prev) =>
-        prev.map((ritual) =>
-          ritual.id === next.id && ritual.status !== 'done' ? { ...ritual, status: 'active' } : ritual,
-        ),
+      const active = ritualsData.find((ritual) => ritual.status === 'active') ?? null;
+      setFocusId(active?.id ?? null);
+      setFeedback(
+        ritualsData.length === 0
+          ? 'Нет активных рамок. Добавь первый шаг.'
+          : 'Нажми на любой ритуал, чтобы зафиксировать шаг.',
       );
-    } else {
-      setFocusId(null);
-      setFeedback('Все ритуалы выполнены. Можно закрепить состояние и отдыхать.');
-      addLogEntry({
-        title: 'Сессия закрыта',
-        note: 'Ритм удержан. Отмечаем спокойствие.',
-      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Ошибка загрузки.';
+      setLoadError(message);
+      setFeedback('Не удалось загрузить состояние.');
     }
   };
 
-  const handleToggleMode = () => {
-    setModeOpen((prev) => !prev);
-    addLogEntry({
-      title: 'Режим раскрыт',
-      note: 'План дня показан без давления.',
+  useEffect(() => {
+    void loadState();
+  }, []);
+
+  const pushLog = async (title: string, note: string) => {
+    const response = await fetch(`${apiUrl}/v1/logs`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ title, note }),
     });
+
+    if (!response.ok) {
+      throw new Error('Не удалось зафиксировать шаг.');
+    }
+
+    const log: LogEntry = await response.json();
+    setLogEntries((prev) => [log, ...prev]);
+  };
+
+  const handleStartRitual = async () => {
+    try {
+      const response = await fetch(`${apiUrl}/v1/rituals/start`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error('Не удалось запустить ритуал.');
+      }
+
+      const updated: Ritual[] = await response.json();
+      setRituals(updated);
+      const active = updated.find((ritual) => ritual.status === 'active') ?? null;
+      setFocusId(active?.id ?? null);
+      if (active) {
+        setFeedback(`Старт мягкой сессии. Сейчас фокус: ${active.title}.`);
+        await pushLog('Сессия началась', `Фокус: ${active.title}.`);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Ошибка запуска.';
+      setLoadError(message);
+    }
+  };
+
+  const handleCompleteRitual = async (ritualId: string) => {
+    try {
+      const response = await fetch(`${apiUrl}/v1/rituals/${ritualId}/complete`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error('Не удалось завершить ритуал.');
+      }
+
+      const updated: Ritual[] = await response.json();
+      setRituals(updated);
+      const completedRitual = updated.find((ritual) => ritual.id === ritualId);
+      if (completedRitual) {
+        await pushLog(`Отмечено: ${completedRitual.title}`, 'Рамки удержаны без давления.');
+      }
+      const next = updated.find((ritual) => ritual.status === 'active') ?? null;
+      setFocusId(next?.id ?? null);
+      const total = updated.length;
+      const completed = updated.filter((ritual) => ritual.status === 'done').length;
+      setFeedback(`Зафиксировано: ${completedRitual?.title ?? 'ритуал'}. ${completed}/${total}.`);
+      const metricsResponse = await fetch(`${apiUrl}/v1/metrics`);
+      if (metricsResponse.ok) {
+        const metricsData: Metric[] = await metricsResponse.json();
+        setMetrics(metricsData);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Ошибка завершения.';
+      setLoadError(message);
+    }
+  };
+
+  const handleToggleMode = async () => {
+    setModeOpen((prev) => !prev);
+    try {
+      await pushLog('Режим раскрыт', 'План дня показан без давления.');
+    } catch {
+      // do nothing, log will be retried on next successful action
+    }
   };
 
   const handleAuthOpen = () => {
@@ -180,7 +206,7 @@ export default function HomePage() {
     setAuthError(null);
 
     try {
-      const response = await fetch(`${apiUrl}/api/v1/session/auth`, {
+      const response = await fetch(`${apiUrl}/v1/session/auth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -196,10 +222,7 @@ export default function HomePage() {
         await response.json();
 
       setAuthResult(`${data.message} Пользователь: ${data.user?.login ?? authForm.login}.`);
-      addLogEntry({
-        title: data.success ? 'Вход подтверждён' : 'Нужен пароль',
-        note: data.message,
-      });
+      await pushLog(data.success ? 'Вход подтверждён' : 'Нужен пароль', data.message);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Не удалось подключиться.';
       setAuthError(message);
@@ -235,17 +258,22 @@ export default function HomePage() {
               ))}
             </div>
           )}
+          {loadError && <p className="auth__error">{loadError}</p>}
         </div>
         <div className="hero__card">
           <h2>Состояние сейчас</h2>
           <p className="muted">Нейтральная фиксация вместо оценки.</p>
           <div className="metrics">
-            {metrics.map((metric) => (
-              <div key={metric.label} className="metric">
-                <span>{metric.label}</span>
-                <strong>{metric.value}</strong>
-              </div>
-            ))}
+            {metrics.length === 0 ? (
+              <p className="muted">Метрики загружаются...</p>
+            ) : (
+              metrics.map((metric) => (
+                <div key={metric.label} className="metric">
+                  <span>{metric.label}</span>
+                  <strong>{metric.value}</strong>
+                </div>
+              ))
+            )}
           </div>
           <div className="progress">
             <div className="progress__head">
@@ -280,26 +308,30 @@ export default function HomePage() {
           )}
         </div>
         <div className="rituals__grid">
-          {rituals.map((ritual) => (
-            <article key={ritual.title} className={`ritual ritual--${ritual.status}`}>
-              <div>
-                <h3>{ritual.title}</h3>
-                <p>{ritual.detail}</p>
-              </div>
-              <div className="ritual__meta">
-                <span>{ritual.duration}</span>
-                {ritual.status === 'done' ? <span>Готово</span> : <span>Мягкий шаг</span>}
-              </div>
-              <button
-                className={ritual.status === 'done' ? 'ghost ghost--disabled' : 'ghost'}
-                type="button"
-                onClick={() => handleCompleteRitual(ritual.id)}
-                disabled={ritual.status === 'done'}
-              >
-                {ritual.status === 'done' ? 'Отмечено' : 'Я сделаю это'}
-              </button>
-            </article>
-          ))}
+          {rituals.length === 0 ? (
+            <p className="muted">Ритуалы загружаются...</p>
+          ) : (
+            rituals.map((ritual) => (
+              <article key={ritual.title} className={`ritual ritual--${ritual.status}`}>
+                <div>
+                  <h3>{ritual.title}</h3>
+                  <p>{ritual.detail}</p>
+                </div>
+                <div className="ritual__meta">
+                  <span>{ritual.duration}</span>
+                  {ritual.status === 'done' ? <span>Готово</span> : <span>Мягкий шаг</span>}
+                </div>
+                <button
+                  className={ritual.status === 'done' ? 'ghost ghost--disabled' : 'ghost'}
+                  type="button"
+                  onClick={() => handleCompleteRitual(ritual.id)}
+                  disabled={ritual.status === 'done'}
+                >
+                  {ritual.status === 'done' ? 'Отмечено' : 'Я сделаю это'}
+                </button>
+              </article>
+            ))
+          )}
         </div>
         <div className="log">
           <h3>Лента фиксаций</h3>
@@ -310,7 +342,7 @@ export default function HomePage() {
               {logEntries.map((entry) => (
                 <li key={entry.id}>
                   <strong>{entry.title}</strong>
-                  <span>{entry.timestamp}</span>
+                  <span>{formatTime(entry.createdAt)}</span>
                   <p>{entry.note}</p>
                 </li>
               ))}

@@ -10,6 +10,7 @@ services:
       - "${BACK_PORT:-3001}:3001"
     volumes:
       - ./back:/app
+      - ./data:/app/data
     working_dir: /app
 
   front:
