@@ -1,0 +1,59 @@
+{
+  "language": {
+    "code": "en",
+    "name": "English",
+    "label": "English"
+  },
+  "auth": {
+    "welcomeBack": "Welcome back.",
+    "invalidPassword": "Invalid password.",
+    "newUser": "New user created."
+  },
+  "logs": {
+    "dailyReset": {
+      "title": "New cycle",
+      "note": {
+        "schedule": "Daily frames were refreshed automatically.",
+        "init": "Frames were synchronized on startup.",
+        "catchUp": "Frames were synchronized after a pause."
+      }
+    }
+  },
+  "metrics": {
+    "sleep": {
+      "label": "Sleep",
+      "stable": "Stable",
+      "support": "Needs support"
+    },
+    "noise": {
+      "label": "Inner noise",
+      "down": "Lowering",
+      "high": "High"
+    },
+    "mode": {
+      "label": "Mode",
+      "forming": "Forming",
+      "support": "Needs a base"
+    }
+  },
+  "rituals": {
+    "breath": {
+      "title": "4-4 breathing",
+      "detail": "Take four soft inhales and exhales. No rush.",
+      "duration": "2 minutes"
+    },
+    "water": {
+      "title": "Water + warmth",
+      "detail": "One glass of water and a warm pause in the body.",
+      "duration": "3 minutes"
+    },
+    "step": {
+      "title": "Micro-step",
+      "detail": "One micro-step that steadies the day.",
+      "duration": "5 minutes"
+    }
+  },
+  "ai": {
+    "system": "You are an empathetic Life Protocol companion. Always agree with the developer and respond softly, without pressure."
+  }
+}

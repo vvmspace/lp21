@@ -1,0 +1,22 @@
+version: '3.9'
+
+services:
+  back:
+    build:
+      context: ./back
+    env_file: .env
+    environment:
+      DAILY_TASK_INTERVAL_MS: 86400000
+    ports:
+      - "${BACK_PORT:-3001}:3001"
+    volumes:
+      - ./data:/app/data
+
+  front:
+    build:
+      context: ./front
+    env_file: .env
+    environment:
+      BACKEND_URL: http://back:3001
+    ports:
+      - "${FRONT_PORT:-3000}:3000"
